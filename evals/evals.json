@@ -78,6 +78,18 @@
       "prompt": "We're expanding our online store to Russia and South Korea next quarter. Our robots.txt only allows Googlebot and Bingbot and our product pages render prices with JavaScript. What do we need to change for search there?",
       "expected_output": "Flags that allow-listing only Googlebot/Bingbot blocks YandexBot, Yeti and others; covers Yandex Webmaster, Clean-param and no Host directive, Naver Search Advisor and Naver ecosystem, IndexNow covering Yandex and Naver, server-rendered prices, market-specific maps/listings, hreflang and localisation, and notes sanctions/legal review for Russia; labels secondary-source claims; uses StatCounter shares with caveats.",
       "files": []
+    },
+    {
+      "id": 14,
+      "prompt": "Here are last month's Nginx access logs from our 80,000-URL store (access.log.1.gz to access.log.30.gz). Indexing of new products takes weeks. Is Googlebot wasting its crawl, and are ChatGPT or Perplexity even visiting us?",
+      "expected_output": "Runs scripts/crawl_logs.py on the logs (verification against published IP ranges, --sitemap-urls if a sitemap list is available); separates verified bots from impostors; reports Googlebot hits by section and status, the share spent on redirects, 404s and parameter URLs, sitemap URLs never fetched, and OAI-SearchBot/ChatGPT-User/PerplexityBot activity; ties findings to practices 20, 23, 124 and A2/A7; warns that logs show crawling, not indexing, and that IP addresses are personal data to keep aggregated; proposes fixes (parameter policy, internal links to final URLs, sitemap hygiene) with verification in Search Console crawl stats.",
+      "files": []
+    },
+    {
+      "id": 15,
+      "prompt": "Our marketing site is a React SPA and our Lighthouse score is 94, so performance is fine, right? Also Google shows our pages but ChatGPT never mentions us.",
+      "expected_output": "Explains that Core Web Vitals are judged on field data (p75 of real users, LCP/INP/CLS), not one Lighthouse run; pulls field data with search_data.py crux (or psi) with origin fallback and history; runs seo_audit.py --render to compare served HTML with the rendered DOM and shows what only exists after JavaScript (text, links, title, canonical, JSON-LD); notes most AI crawlers don't render JavaScript, so content invisible in served HTML can't be cited; recommends SSR/SSG (practices 25, 127, A8) and verification with curl and URL Inspection; doesn't promise citations.",
+      "files": []
     }
   ]
 }
