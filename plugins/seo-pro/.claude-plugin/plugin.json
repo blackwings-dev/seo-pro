@@ -1,7 +1,7 @@
 {
   "name": "seo-pro",
-  "version": "1.1.0",
-  "description": "Engine-aware SEO for Claude Code: 160 core practices plus Bing/Copilot layer, automated auditor, Next.js & multi-stack guides, and AI-search (GEO) optimisation",
+  "version": "1.2.0",
+  "description": "Evidence-led, engine-aware SEO for Claude Code: 160 core practices, Bing/Copilot and AI answer engine layers (ChatGPT, Perplexity, Claude, Google AI), site auditor and stack guides",
   "author": {
     "name": "blackwings.dev",
     "url": "https://github.com/blackwings-dev"
@@ -20,6 +20,12 @@
     "json-ld",
     "bing",
     "copilot",
-    "indexnow"
+    "indexnow",
+    "seo-audit",
+    "technical-seo",
+    "chatgpt",
+    "perplexity",
+    "ai-overviews",
+    "llm-seo"
   ]
 }
