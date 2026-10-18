@@ -36,7 +36,7 @@ from html.parser import HTMLParser
 from typing import Optional
 from xml.etree import ElementTree
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 UA_DEFAULT = ("Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 "
               "(KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36 (compatible; seo-pro-audit/1.0)")
@@ -363,6 +363,14 @@ class Audit:
             rules = groups.get(bot.lower(), star)
             ai[bot] = "blocked" if any(rule == ("disallow", "/") for rule in rules) else "allowed"
         info["bots"] = ai
+        bbot = groups.get("bingbot", star)
+        if any(rule == ("disallow", "/") for rule in bbot):
+            self.add("critical", "B4", "[Bing] robots.txt blocks Bingbot entirely (also removes the site from Copilot)", url)
+        delays = {ua: v for ua, rules in groups.items() for k, v in rules if k == "crawl-delay"}
+        for ua, v in delays.items():
+            self.add("warning" if ua in ("bingbot", "*") else "info", "B6",
+                     f"[Bing] crawl-delay {v} for '{ua}': Bingbot honours it and it overrides BWT Crawl Control", url)
+        info["crawl_delay"] = delays
         if not sitemaps:
             self.add("warning", "2", "robots.txt does not declare the sitemap (Sitemap: line)", url)
         self.site["robots"] = info
@@ -438,6 +446,10 @@ class Audit:
             self.add("critical", "9, 131", "Page could not be fetched", url, r.error)
             return pr
         hops = len(chain) - 1
+        temp = [u for u, st in chain if st in (302, 307)]
+        if temp:
+            self.add("warning", "23, B5", "[Bing] Temporary redirect (302/307): Bing expects 301/308 unless the change lasts under ~2 days",
+                     url, " → ".join(f"{u} [{st}]" for u, st in chain))
         if hops > 1:
             self.add("warning", "23", f"Redirect chain of {hops} hops", url, " → ".join(f"{u} [{s}]" for u, s in chain))
         if r.status >= 500:
@@ -467,6 +479,15 @@ class Audit:
         if pr.noindex:
             sev = "critical" if depth == 0 else "warning"
             self.add(sev, "4, 21, 120", "Page has noindex (meta robots or X-Robots-Tag)", url, robots_meta or xrobots)
+        bing_meta = " ".join(filter(None, [p.meta(name="robots"), p.meta(name="bingbot"), p.meta(name="msnbot")])).lower()
+        directives = bing_meta + " " + xrobots
+        if not pr.noindex:
+            if "noarchive" in directives:
+                self.add("warning", "37, B8", "[Bing] noarchive: content is excluded from Copilot answers and grounding", url, directives.strip())
+            if "nocache" in directives:
+                self.add("warning", "37, B8", "[Bing] nocache: Copilot may only use URL, title and snippet", url, directives.strip())
+            if "nosnippet" in directives or "data-nosnippet" in html:
+                self.add("info", "B8", "[Bing] nosnippet/data-nosnippet: no captions in Bing and weaker Copilot citations", url)
         canon = p.link_rel("canonical")
         if not canon:
             self.add("warning", "18", "Missing rel=canonical", url)
@@ -500,7 +521,7 @@ class Audit:
         elif len(desc) < 70 or len(desc) > 170:
             self.add("info", "56", f"Meta description is {len(desc)} characters (aim for ~140–160)", url, desc)
         if p.meta(name="keywords"):
-            self.add("info", "myths", "Uses meta keywords: Google ignores them", url)
+            self.add("info", "myths", "Uses meta keywords: ignored by Google and Bing; stuffing can be a Bing spam signal", url)
 
         # ---- headings
         h1s = [t for lvl, t in p.headings if lvl == 1]
@@ -533,6 +554,13 @@ class Audit:
             for lg in langs:
                 if lg in ("en-uk", "es-eu", "en-eu") or not re.fullmatch(r"x-default|[a-z]{2,3}(-[a-z]{2}|-[a-z]{4})?", lg):
                     self.add("warning", "137", f"Invalid hreflang code: {lg}", url)
+        if depth == 0 and deep_checks:
+            has_meta = bool(p.meta(name="msvalidate.01"))
+            bsa = fetch(urllib.parse.urljoin(final, "/BingSiteAuth.xml"), self.ua, self.timeout)
+            has_file = bsa.status == 200 and b"<user>" in bsa.body.lower()
+            self.site["bing_verification"] = {"msvalidate.01": has_meta, "BingSiteAuth.xml": has_file}
+            if not (has_meta or has_file):
+                self.add("info", "5, B1", "[Bing] No msvalidate.01 meta or BingSiteAuth.xml found (fine if verified by DNS or GSC import)", url)
         if depth == 0:
             if not p.meta(prop="og:title") or not p.meta(prop="og:image"):
                 self.add("info", "70", "Missing Open Graph tags (og:title / og:image)", url)
@@ -658,6 +686,15 @@ class Audit:
         elif rp.status in (301, 302, 307, 308):
             self.add("warning", "9", "Non-existent URLs redirect instead of returning 404", probe, rp.header("location"))
 
+    def check_indexnow(self, base: str, key: str):
+        url = urllib.parse.urljoin(base, f"/{key}.txt")
+        r = fetch(url, self.ua, self.timeout)
+        ok = r.status == 200 and decode_body(r).strip() == key
+        self.site["indexnow"] = {"key_file": url, "valid": ok}
+        if not ok:
+            self.add("warning", "5, B2", "[Bing] IndexNow key file missing or its content doesn't match the key", url,
+                     r.error or r.status)
+
     # ------------------------------------------------------------------ crawl
     def crawl(self, start: str, limit: int, sitemap_urls: list[str]):
         start_host = urllib.parse.urlsplit(start).hostname
@@ -756,7 +793,7 @@ def parse_robots(text: str) -> dict:
             current.append(v.lower())
             groups.setdefault(v.lower(), [])
             last_was_ua = True
-        elif k in ("allow", "disallow"):
+        elif k in ("allow", "disallow", "crawl-delay"):
             last_was_ua = False
             for ua in current:
                 groups.setdefault(ua, []).append((k, v))
@@ -806,6 +843,17 @@ def render_markdown(audit: Audit, start: str) -> str:
         lines += ["## Crawlers (per robots.txt)", "", "| User agent | Status |", "|---|---|"]
         lines += [f"| {k} | {v} |" for k, v in rb["bots"].items()]
         lines += ["", "_Make a deliberate decision about AI crawlers (practice 37)._", ""]
+    bv = audit.site.get("bing_verification")
+    if bv or audit.site.get("indexnow") or (rb.get("crawl_delay")):
+        lines += ["## Bing & Copilot", ""]
+        if bv:
+            lines.append(f"- BWT verification: msvalidate.01 {'yes' if bv['msvalidate.01'] else 'no'} · BingSiteAuth.xml {'yes' if bv['BingSiteAuth.xml'] else 'no'}")
+        if audit.site.get("indexnow"):
+            ix = audit.site["indexnow"]
+            lines.append(f"- IndexNow key file: {ix['key_file']} → {'valid' if ix['valid'] else 'INVALID'}")
+        if rb.get("crawl_delay"):
+            lines.append(f"- crawl-delay: {rb['crawl_delay']}")
+        lines += ["", "_See references/engines/bing.md for B-practices._", ""]
     sm = audit.site.get("sitemap")
     if sm:
         lines += ["## Sitemap", "", f"- Files: {', '.join(sm['files'])}", f"- URLs listed: {sm['url_count']}", ""]
@@ -842,6 +890,7 @@ def main(argv=None) -> int:
     ap.add_argument("--timeout", type=float, default=20)
     ap.add_argument("--skip-variants", action="store_true", help="Don't test http/https/www variants")
     ap.add_argument("--skip-sitemap", action="store_true", help="Don't download the sitemap")
+    ap.add_argument("--indexnow-key", help="IndexNow key to verify at /<key>.txt on the audited host")
     ap.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     args = ap.parse_args(argv)
 
@@ -866,6 +915,8 @@ def main(argv=None) -> int:
             audit.check_variants(start)
         sitemaps = audit.check_robots(base)
         sm_urls = [] if args.skip_sitemap else audit.check_sitemaps(base, sitemaps)
+        if args.indexnow_key:
+            audit.check_indexnow(base, args.indexnow_key)
         if args.crawl > 1:
             audit.crawl(base if norm(base) != norm(start) else start, args.crawl, sm_urls)
 
