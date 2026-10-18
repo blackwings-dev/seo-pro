@@ -181,9 +181,9 @@ Don't merge metrics with different definitions into one "AI visibility score" wi
 | Site type | Reasonable priorities | Interpretation risk |
 |---|---|---|
 | Editorial / media | Per-bot access policy, rights and licensing, authorship, primary sources, original data; measure impressions, citations and traffic | A citation can replace a visit; separate brand value, traffic and revenue model |
-| E-commerce | Exact product, price, stock, shipping and returns data; accessible pages; current feeds; transparent comparisons | Product schema doesn't raise citations by itself; stale price/stock can make answers wrong |
+| E-commerce | Exact product, price, stock, shipping and returns data; accessible pages; current feeds; transparent comparisons; agentic-commerce channels (ChatGPT product feeds via ACP, Google UCP) as separate products (`../verticals/ecommerce.md` E21) | Product schema doesn't raise citations by itself; stale price/stock can make answers wrong |
 | SaaS / documentation | Public crawlable docs, clear versions, working examples, limits and compatibility; links between product, docs and support | Docs behind login or code only inside the app can't be retrieved |
-| Local | Consistent name, address, phone, area, hours, services; official profiles (GBP, Bing Places); genuine reviews | Wrong hours or availability cause direct harm; monitor answers |
+| Local | Consistent name, address, phone, area, hours, services; official profiles (GBP, Bing Places, Apple Business); genuine reviews; customer FAQs on the website, which Google Maps' AI "Ask" feature can draw on (`../verticals/local.md` L8) | Wrong hours or availability cause direct harm; monitor answers |
 | Health, finance, legal (YMYL) | Verifiable credentials, professional review, primary sources, dates, limits, correction process, compliance | Summaries lose nuance; audit critical claims; a citation isn't professional endorsement |
 | B2B / manufacturers | Specs, compatibility, current certifications, versioned downloadable sheets, verifiable cases, stable entity vocabulary | Little-known products may not surface in familiarity-driven answers; don't manufacture mentions |
 

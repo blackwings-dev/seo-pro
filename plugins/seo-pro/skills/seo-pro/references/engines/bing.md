@@ -147,7 +147,7 @@ Bing publishes its main ranking parameters, in general order of importance: **re
 - **How:** claim or create the listing at **bing.com/forbusiness** (Bing Places moved there in October 2025); import from Google Business Profile to save time; keep NAP, categories, hours (including holidays), photos and services identical to the site and GBP (shared 28, 104); reply to reviews.
 - **Expected result:** verified listing consistent with Google.
 - **Avoid:** keyword-stuffed business names, stock photos, purchased reviews.
-- **Verify:** listing status in Bing Places; Bing local results for brand + city.
+- **Verify:** listing status in Bing Places; Bing local results for brand + city. Eligibility, service areas, reviews, Apple Business and measurement: `../verticals/local.md` (L2–L11, L18–L19).
 
 ### B16. Earned links only — no artificial social promotion — High
 - **Why:** Bing names link buying, link spamming, private networks **and "artificial social promotion schemes that simulate popularity"**.
@@ -187,8 +187,10 @@ Bing publishes its main ranking parameters, in general order of importance: **re
 ### B22. Video via mRSS — Low (Medium for video-heavy sites)
 - **How:** besides `VideoObject` (shared 146), Bing accepts **Media RSS (mRSS)** feeds for video discovery; submit them like sitemaps. Video must reinforce the text, not replace it (Bing guideline on images and video).
 
-### B23. News via Bing News PubHub — Low (High for publishers)
-- **How:** publishers apply through **PubHub** and follow its publisher guidelines (clear authorship, dates, original reporting). Shared 102–103 apply.
+### B23. News in Bing: automated discovery (PubHub is retired) — Low (High for publishers)
+- **Why:** Microsoft retired Bing News PubHub (2025); it no longer takes submissions. Bing News discovers eligible content automatically, evaluating authority, originality, relevance, freshness, location and language.
+- **How:** BWT verification (B1), sitemaps and IndexNow (B2), Open Graph thumbnails, clear authorship, dates and original reporting (102–103). Full publisher layer: `../verticals/publishers.md` (P18).
+- **Avoid:** old guides telling you to "submit to PubHub".
 
 ---
 

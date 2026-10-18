@@ -5,9 +5,11 @@ The 160 practices in `phase-1/2/3` are the **shared core**: they work for every 
 | File | Engine(s) | Practice IDs | Status |
 |---|---|---|---|
 | `bing.md` | Bing, Microsoft Copilot, and products that license Bing results | B1–B24 | Available |
+| `video-images.md` | Google video results and Video mode, YouTube search and recommendations, Google Images, Discover thumbnails, image licensing and provenance | V1–V14 | Available |
+| `other-engines.md` | Yandex, Baidu, Naver, Seznam, the IndexNow network, Brave, DuckDuckGo, Ecosia/Qwant (EUSP), Apple (Applebot), Mojeek, Kagi | W1–W12 | Available |
 | `ai-search.md` | AI answer engines: Google AI Overviews / AI Mode, ChatGPT Search, Perplexity, Claude with web search (Copilot via `bing.md`) — access funnel, per-agent controls, measurement protocol | A1–A18 | Available |
 
-New engines are added as their own file with their own ID prefix (e.g. `yandex.md` → Y1…), plus a row in this table and a column in the matrix below. Never renumber the shared core.
+New engines are added as their own file with their own ID prefix, plus a row in this table and a column in the matrix below. Never renumber the shared core. Layers by **business model** (local L1–L22, e-commerce E1–E24, publishers P1–P20, regulated topics Y1–Y16) live in `../verticals/`; cross-cutting **playbooks** (migrations M, measurement X, reputation R, governance G) live in `../playbooks/`.
 
 ## Step 0 of every job: decide the target engines
 
@@ -15,7 +17,8 @@ Ask (or infer from the market) which engines matter. Defaults:
 
 - **Every site:** Google + Bing, plus the AI answer engines that matter for the audience (`ai-search.md` A1).
 - **Classic engines:** Google + Bing. Bing is small in many markets, but its index also feeds Microsoft Copilot and several other search and AI products, so ignoring it means ignoring a whole family of surfaces.
-- **Markets with other leaders** (e.g. Yandex, Naver, Baidu, Seznam): flag that the skill doesn't yet have a layer for them and apply the shared core.
+- **Markets with other leaders** (Russia → Yandex, mainland China → Baidu, South Korea → Naver, Czechia → Seznam): add `other-engines.md` (W1–W12). For French and German audiences, also keep the European index (Ecosia/Qwant) and Brave able to crawl (W9–W10).
+- **Video or image-heavy sites, YouTube channels:** add `video-images.md` (V1–V14).
 
 Then read the shared practice **and** the engine layer for anything you implement. The engine layer only lists what changes.
 
@@ -49,11 +52,13 @@ Only rows where behaviour differs or each engine has its own tool. Everything el
 | Language/region signals | `hreflang` (primary), content | `<html lang>`, `content-language`, content; Bing has historically treated hreflang as a weaker hint | Emit `hreflang` **and** correct `lang` (+ optional `content-language`) | 134–137, B12 |
 | Exact wording | Heavy synonym/semantic matching | Relevance defined with "matching terms, link phrases, synonyms"; more literal | Use the searcher's exact wording in title/H1/anchors where natural | 56, 82, B13 |
 | Meta keywords | Ignored | Ignored for ranking; stuffing can be a spam signal | Don't use | myths, B14 |
-| Local listings | Google Business Profile | Bing Places for Business (bing.com/forbusiness; can import from GBP) | Maintain both with identical NAP | 28, B15 |
+| Local listings | Google Business Profile | Bing Places for Business (bing.com/forbusiness; can import from GBP) | Maintain both (plus Apple Business for Apple Maps) from one master record | 28, B15, L16, L18 |
+| Product feeds | Merchant Center: free listings across Google surfaces + Shopping ads | Microsoft Merchant Center: Product Ads / Shopping campaigns (paid) | Free listings are an SEO-adjacent channel on Google; Microsoft feeds are ads, keep them separate | 71, E15, E20 |
+| Shipping & returns | Search Console settings or organization-level markup (Nov 2025), Merchant Center | Merchant Center (ads) | One policy, identical everywhere | E14 |
 | Link guidance | Spam policies | Link schemes **and** "artificial social promotion" named | Earned links only; no fake social signals | 101, B16 |
 | AI manipulation | Spam policies cover AI Overviews/AI Mode (May 2026) | "Prompt injection and AI manipulation" explicitly named | No hidden instructions to models, anywhere | 61, 67, B17 |
 | Crawl control & tools | Crawl stats; no rate setting | Crawl Control (hourly rate), Block URLs, robots.txt tester, Verify Bingbot, Site Scan, Keyword Research, Backlinks, Recommendations, Clarity | Use them in audits | B18–B21 |
-| Video / news | Video sitemaps, `VideoObject`; Publisher Center | mRSS feeds; Bing News PubHub | Implement the engine-specific feed only if video/news matters | 146, B22, B23 |
+| Video / news | Video sitemaps, `VideoObject`; News sitemaps; Google News discovers content automatically (no submission; Publisher Center only for specific programmes) | mRSS feeds; Bing News discovers automatically (PubHub retired) | Implement the engine-specific feed only if video/news matters | 146, B22, B23, P12–P13, P18 |
 
 ## AI answer engines — controls matrix
 
