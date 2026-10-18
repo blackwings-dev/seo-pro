@@ -24,6 +24,60 @@
       "prompt": "Our B2B SaaS docs never show up in ChatGPT or Perplexity answers. Someone on the team wants to add llms.txt, special 'AI schema' and rewrite every page into 300-word chunks. Our robots.txt blocks GPTBot and we use Cloudflare's 'block AI bots'. What should we do?",
       "expected_output": "Works through the access-to-citation funnel first: checks whether OAI-SearchBot/PerplexityBot/Claude-SearchBot are blocked (Cloudflare toggle) versus GPTBot (training only), WAF verification by UA+IP, docs readable without JS or login; explains llms.txt, AI schema and 300-word chunking are not supported levers; separates search/training/user-fetch decisions; proposes a query panel, observation log and referral tracking (utm_source=chatgpt.com) with confidence labels, no guaranteed citations.",
       "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "We're a plumbing company based in Valencia and we also cover Paterna, Torrent and Sagunto. A consultant suggests renaming our Google profile to 'Plumbers Valencia 24h – FastFix', opening profiles with virtual offices in each town, and sending the review link only to customers who rated us 5 on our internal survey. We also want to appear on Apple Maps. What should we do?",
+      "expected_output": "Classifies the business as a service-area business, rejects the keyword-stuffed name, virtual-office listings and review gating with the policy reasons (and notes legal context without giving legal advice), recommends hiding the address if customers aren't received, real service areas, a neutral review request to all customers, genuine area pages without fake branches, Bing Places and Apple Business from one master record, and measurement per location and surface with query/point/date; doesn't promise map rankings or treat LocalBusiness schema or geo-grids as proof.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "Our fashion store has 4,000 products and Search Console shows 1.2 million 'Crawled – currently not indexed' URLs, mostly ?color=&size=&sort= combinations. Sold-out items are deleted and return 404, and Merchant Center keeps flagging price mismatches. A plugin and the theme both add Product schema. Someone wants to Disallow all parameters today. Also, should we implement UCP so we rank in AI Mode?",
+      "expected_output": "Maps parameters before touching robots.txt, warns that blocking already-indexed facets hides noindex, proposes a per-pattern facet policy (curated indexable facets with demand, controlled combinations, 404 for impossible filters), linked pagination, a stock-state lifecycle instead of deleting sold-out items, a single source of Product/ProductGroup markup in the server HTML, catalogue reconciliation for price mismatches, and frames UCP/ACP as separate early-access commerce channels with no documented organic-ranking effect; asks for confirmation before production robots changes and defines catalogue metrics with denominators.",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "We're a regional news site. Our SEO agency says we need to apply for Google News approval, submit to Bing PubHub, add NewsArticle schema to get into Top Stories, and republish every wire story to grow URLs. Discover traffic also fell 60% in February. What should we actually do?",
+      "expected_output": "Explains Google News needs no submission (automatic publication pages since March 2025), PubHub is retired, NewsArticle isn't required for Top Stories, and wire republication creates duplicates; focuses on transparency, permanent URLs, crawlable HTML, News sitemap rules, syndication handling, images with max-image-preview:large; diagnoses Discover by checking technical changes and the February 2026 Discover core update (local relevance, less clickbait, in-depth content) without promising recovery; measures Search, News and Discover separately.",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "Next month we move from WordPress on oldbrand.es to Shopify on newbrand.com, with a new design and rewritten product copy, all on the same day. The developer wants to redirect every old URL to the new home page. How do we do this without losing traffic?",
+      "expected_output": "Classifies the layers changing (domain, platform, design, content), recommends separating them where feasible, builds a multi-source inventory and master URL file, maps by equivalence with 404/410 where there is no substitute and rejects home redirects (soft 404 risk), covers Change of Address for all verified variants, template parity, facets on the new platform, a go/no-go list, rollback plan and old+new monitoring; doesn't promise traffic will be kept.",
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "Our marketing team says GA4 shows organic search generated €480k last year and wants to double the SEO budget. The CFO asks if SEO really caused that. How should we answer and measure it from now on?",
+      "expected_output": "Separates observation, attribution, prediction and causal inference; explains GA4 credit depends on model, window, identity and consent; reconciles with backend revenue; splits brand vs non-brand (branded queries filter plus own rules); proposes cohorts and an incrementality design (page-group randomisation or diff-in-diff with stated assumptions, MDE, guardrails, pre-registration); avoids claiming causality from attribution.",
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "We run a private dermatology clinic and want 200 AI-written pages like 'best treatment for acne in [city]', each with 'reviewed by Dr. X' (she hasn't seen them), patient before/after photos, and a disclaimer at the bottom. Can you write the template?",
+      "expected_output": "Declines the deceptive parts (fake review attribution, mass city doorway pages, testimonials as proof) and explains scaled content abuse and YMYL risk; proposes a risk classification, real clinician review with scope, claims ledger, evidence-proportional wording, consented and disclosed patient content, genuine location pages, and that disclaimers don't fix claims; notes jurisdictional rules on health advertising without giving legal advice.",
+      "files": []
+    },
+    {
+      "id": 11,
+      "prompt": "We run a home-cleaning booking platform. We want to generate 5,000 pages like 'house cleaning in [city]' for every Spanish town, using AI to write a unique intro for each. We only have cleaners in 40 cities. Plan it.",
+      "expected_output": "Applies the programmatic legitimacy test: pages only where the service exists (about 40 cities) with real per-city data (cleaners, prices, availability, reviews), rejects AI filler for uniqueness and doorway pages for unserved towns, sets indexing thresholds and 404/no generation for empty combinations, hubs and internal linking, launch in waves with cohort measurement, and links to local-page rules; no promise of rankings.",
+      "files": []
+    },
+    {
+      "id": 12,
+      "prompt": "We're a B2B SaaS with docs on docs.example.com (React SPA), app.example.com, five versions of our API docs and comparison pages that always say we win. Sign-ups from organic are up but paid conversions aren't. Give me a 90-day plan.",
+      "expected_output": "Uses the operating plan's SaaS playbook: 10-day diagnosis, journey-to-page map, server-rendered docs, app and preview hosts out of the index with auth/noindex, a versioned-docs canonical policy, honest comparisons with criteria and disclosure, activation and paid-conversion cohorts joined with CRM instead of sign-ups, 0–30/31–60/61–90 phases with indicators and cadences; doesn't treat rankings or AI citations as the KPI.",
+      "files": []
+    },
+    {
+      "id": 13,
+      "prompt": "We're expanding our online store to Russia and South Korea next quarter. Our robots.txt only allows Googlebot and Bingbot and our product pages render prices with JavaScript. What do we need to change for search there?",
+      "expected_output": "Flags that allow-listing only Googlebot/Bingbot blocks YandexBot, Yeti and others; covers Yandex Webmaster, Clean-param and no Host directive, Naver Search Advisor and Naver ecosystem, IndexNow covering Yandex and Naver, server-rendered prices, market-specific maps/listings, hreflang and localisation, and notes sanctions/legal review for Russia; labels secondary-source claims; uses StatCounter shares with caveats.",
+      "files": []
     }
   ]
 }
