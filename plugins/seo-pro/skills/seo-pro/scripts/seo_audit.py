@@ -13,6 +13,7 @@ Usage:
   python3 seo_audit.py https://example.com --crawl 100 --output report.md --json report.json
   python3 seo_audit.py --urls critical.txt --fail-on critical        # for alerts in CI/cron
   python3 seo_audit.py http://localhost:3000 --crawl 50 --skip-variants
+  python3 seo_audit.py --redirect-map redirects.csv --fail-on critical   # validate a migration map
 
 Exit code: 0 when there are no findings at the --fail-on level (default "none"), 1 when there are,
 2 when the start URL could not be fetched.
@@ -20,6 +21,7 @@ Exit code: 0 when there are no findings at the --fail-on level (default "none"),
 from __future__ import annotations
 
 import argparse
+import csv
 import gzip
 import json
 import re
@@ -36,7 +38,7 @@ from html.parser import HTMLParser
 from typing import Optional
 from xml.etree import ElementTree
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 UA_DEFAULT = ("Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 "
               "(KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36 (compatible; seo-pro-audit/1.0)")
@@ -50,6 +52,24 @@ BOT_PURPOSE = {"Googlebot": "search (also Google AI features)", "Bingbot": "sear
                "ChatGPT-User": "user fetch (robots may not apply)", "Perplexity-User": "user fetch (generally ignores robots)",
                "Claude-User": "user fetch (Claude)"}
 SEARCH_AI_BOTS = ("OAI-SearchBot", "PerplexityBot", "Claude-SearchBot")
+LOCAL_TYPES = {t.lower() for t in (
+    "LocalBusiness", "Store", "AutomotiveBusiness", "AutoRepair", "AutoDealer", "ChildCare", "Dentist",
+    "DryCleaningOrLaundry", "EmergencyService", "EmploymentAgency", "EntertainmentBusiness", "FinancialService",
+    "FoodEstablishment", "Restaurant", "CafeOrCoffeeShop", "Bakery", "BarOrPub", "GovernmentOffice",
+    "HealthAndBeautyBusiness", "BeautySalon", "HairSalon", "DaySpa", "NailSalon", "HomeAndConstructionBusiness",
+    "Electrician", "GeneralContractor", "HVACBusiness", "HousePainter", "Locksmith", "MovingCompany", "Plumber",
+    "RoofingContractor", "InternetCafe", "LegalService", "Attorney", "Notary", "Library", "LodgingBusiness", "Hotel",
+    "MedicalBusiness", "MedicalClinic", "Optician", "Pharmacy", "Physician", "Physiotherapy", "VeterinaryCare",
+    "ProfessionalService", "AccountingService", "RealEstateAgent", "SelfStorage", "ShoppingCenter",
+    "SportsActivityLocation", "ExerciseGym", "TouristInformationCenter", "TravelAgency", "ClothingStore",
+    "ElectronicsStore", "FurnitureStore", "GroceryStore", "HardwareStore", "BookStore", "AutoPartsStore",
+    "ShoeStore", "SportingGoodsStore", "JewelryStore", "PetStore", "Florist", "MobilePhoneStore", "ToyStore",
+    "BikeStore", "Campground", "AnimalShelter", "RadioStation", "RecyclingCenter")}
+PRODUCT_TYPES = {"product", "productmodel", "individualproduct", "somebrands"}
+ARTICLE_TYPES = {"newsarticle", "article", "blogposting", "reportagenewsarticle", "analysisnewsarticle", "liveblogposting"}
+TRACKING_PARAMS = re.compile(r"^(utm_\w+|gclid|gbraid|wbraid|fbclid|msclkid|mc_cid|mc_eid|_ga|igshid|yclid)$", re.I)
+SORT_PARAMS = {"sort", "order", "orderby", "sortby", "dir", "direction"}
+PAGE_PARAMS = {"page", "p", "pg", "paged", "pagina", "start", "offset"}
 SEVERITY_ORDER = {"critical": 0, "warning": 1, "info": 2}
 SEV_LABEL = {"critical": "🔴 Critical", "warning": "🟠 Warning", "info": "🔵 Info"}
 
@@ -305,6 +325,7 @@ class Audit:
         self.pages: dict[str, PageResult] = {}
         self.site: dict = {}
         self._analyzed_finals: set[str] = set()
+        self._entities_checked: set[str] = set()
 
     def add(self, severity, practices, message, url="", evidence=""):
         self.findings.append(Finding(severity, practices, message, url, str(evidence)[:300]))
@@ -336,6 +357,82 @@ class Audit:
             self.add("critical", "8, 18, 23", "http/https/www variants do not converge on a single canonical URL",
                      start_url, "; ".join(sorted(targets)))
         self.site["variants"] = {k: [f"{u} [{s}]" for u, s in v[1]] for k, v in finals.items()}
+
+    def check_redirect_map(self, path: str, base: str = ""):
+        """Validate a migration redirect map (playbooks/migrations.md M5, M7, M8).
+
+        CSV columns: old_url,new_url[,expected_status]. Empty new_url = page retired (expect 404/410);
+        new_url equal to old_url = unchanged (expect 200). Relative URLs are resolved against base."""
+        rows = []
+        with open(path, newline="", encoding="utf-8-sig") as fh:
+            for rec in csv.reader(fh):
+                if not rec or not rec[0].strip() or rec[0].strip().startswith("#"):
+                    continue
+                if rec[0].strip().lower() in ("old_url", "old", "source", "from"):
+                    continue
+                old = urllib.parse.urljoin(base, rec[0].strip()) if base else rec[0].strip()
+                new = rec[1].strip() if len(rec) > 1 else ""
+                new = urllib.parse.urljoin(base or old, new) if new else ""
+                exp = rec[2].strip() if len(rec) > 2 and rec[2].strip() else ""
+                rows.append((old, new, exp))
+        olds = Counter(norm(o) for o, _n, _e in rows)
+        dup = [o for o, c in olds.items() if c > 1]
+        if dup:
+            self.add("warning", "M5", f"{len(dup)} old URLs appear more than once in the redirect map", path, ", ".join(dup[:3]))
+        moved = {norm(o) for o, n, _e in rows if n and norm(n) != norm(o)}
+        chained = sorted({n for o, n, _e in rows if n and norm(n) in moved and norm(n) != norm(o)})
+        if chained:
+            self.add("warning", "M5, M8", f"{len(chained)} destinations are themselves old URLs in the map (planned chains)",
+                     path, ", ".join(chained[:3]))
+        results, counts = [], Counter()
+        for old, new, exp in rows:
+            r, chain = fetch_follow(old, self.ua, self.timeout)
+            first = chain[0][1] if chain else None
+            hops = sum(1 for _u, s in chain if isinstance(s, int) and s in (301, 302, 303, 307, 308))
+            loop = any(s == "LOOP" for _u, s in chain)
+            final_url, final_status = (r.url, r.status) if not r.error else (old, f"ERROR {r.error}")
+            problems = []
+            retire = not new
+            unchanged = bool(new) and norm(new) == norm(old)
+            if loop:
+                problems.append(("critical", "M8", "redirect loop"))
+            elif retire:
+                if final_status not in (404, 410) and (not exp or str(final_status) != exp):
+                    if hops and urllib.parse.urlsplit(final_url).path in ("", "/"):
+                        problems.append(("warning", "M7", "retired URL redirects to the home page (soft-404 risk)"))
+                    elif final_status == 200 and not hops:
+                        problems.append(("warning", "M7", "retired URL still returns 200"))
+                    elif hops:
+                        problems.append(("info", "M7", "retired URL redirects; confirm the destination is a true equivalent"))
+            elif unchanged:
+                if final_status != 200 or hops:
+                    problems.append(("critical", "M14", f"unchanged URL no longer returns 200 directly ({first} → {final_status})"))
+            else:
+                if not hops:
+                    problems.append(("critical", "M7", f"no redirect (returns {first})"))
+                else:
+                    if first in (302, 303, 307):
+                        problems.append(("warning", "23, B5, M8", f"temporary redirect ({first}) for a permanent move"))
+                    if hops > 1:
+                        problems.append(("warning", "23, M8", f"{hops} hops instead of 1"))
+                    if norm(final_url) != norm(new):
+                        sev = "critical"
+                        if urllib.parse.urlsplit(final_url).path in ("", "/") and urllib.parse.urlsplit(new).path not in ("", "/"):
+                            problems.append((sev, "M7", "lands on the home page instead of the mapped destination (soft-404 risk)"))
+                        else:
+                            problems.append((sev, "M7", "lands on an unexpected destination"))
+                    if final_status != 200:
+                        problems.append(("critical", "M7, 9", f"destination returns {final_status}"))
+                if exp and str(first) != exp:
+                    problems.append(("warning", "M8", f"expected first status {exp}, got {first}"))
+            status = "ok" if not problems else max(problems, key=lambda x: -SEVERITY_ORDER[x[0]])[0]
+            counts[status] += 1
+            results.append({"old": old, "expected": new or "(retired)", "first": first, "hops": hops,
+                            "final": final_url, "final_status": final_status,
+                            "problems": "; ".join(m for _s, _p, m in problems)})
+            for sev, prac, msg in problems:
+                self.add(sev, prac, f"[Redirect map] {msg}", old, f"→ {final_url} [{final_status}]")
+        self.site["redirect_map"] = {"file": path, "rows": len(rows), "counts": dict(counts), "results": results}
 
     def check_robots(self, base: str) -> list[str]:
         url = urllib.parse.urljoin(base, "/robots.txt")
@@ -580,6 +677,7 @@ class Audit:
                 self.add("info", "34", "No favicon declared with <link rel=icon>", url)
 
         # ---- JSON-LD
+        jsonld_blocks = []
         for s in p.scripts:
             if s["attrs"].get("type", "").lower() == "application/ld+json":
                 raw = s["content"].strip()
@@ -589,7 +687,10 @@ class Audit:
                     self.add("critical", "59", "JSON-LD is invalid JSON (Google ignores it)", url, e)
                     continue
                 pr.jsonld_types.extend(jsonld_types(data))
+                jsonld_blocks.append(data)
         types_lower = {t.lower() for t in pr.jsonld_types}
+        if jsonld_blocks:
+            self.check_entities(url, jsonld_blocks, p)
         if depth == 0 and not types_lower & {"organization", "localbusiness", "corporation", "store",
                                               "professionalservice", "onlinestore", "website"}:
             self.add("info", "38", "Start page declares no Organization/WebSite JSON-LD", url)
@@ -656,6 +757,101 @@ class Audit:
         if r.elapsed > 1.8:
             self.add("warning", "6, 10, 11", f"Slow response: {int(r.elapsed*1000)} ms (TTFB + download from this machine)", url)
         return pr
+
+    def check_entities(self, url: str, blocks: list, p: "PageParser"):
+        """LocalBusiness and Product checks (verticals/local.md L15, verticals/ecommerce.md E7-E16)."""
+        canon = next((l.get("href") for l in p.link_rel("canonical") if l.get("href")), "")
+        key = norm(urllib.parse.urljoin(url, canon)) if canon else norm(url.split("?", 1)[0])
+        if key in self._entities_checked:
+            return  # parameter/duplicate URL of a page already checked
+        self._entities_checked.add(key)
+        visible = " ".join(p.text_parts)
+        visible_digits = re.sub(r"\D", "", visible) + " " + " ".join(
+            re.sub(r"\D", "", h or "") for h, _r, _t in p.anchors if (h or "").lower().startswith("tel:"))
+        product_names = Counter()
+        for bi, block in enumerate(blocks):
+            names_here = set()
+            for node in jsonld_nodes(block):
+                types = {t.lower() for t in _types(node)}
+                if types & LOCAL_TYPES or any(x.endswith("store") and x != "onlinestore" for x in types):
+                    self._check_local(url, node, visible_digits)
+                if types & ARTICLE_TYPES:
+                    self._check_article(url, node, p)
+                if types & PRODUCT_TYPES:
+                    nm = str(node.get("name", "")).strip()
+                    if nm and nm not in names_here:
+                        names_here.add(nm)
+                        product_names[nm] += 1
+                    self._check_product(url, node, visible)
+        dup = [n for n, c in product_names.items() if c > 1]
+        if dup:
+            self.add("warning", "71, E13, E19", f"The same Product is declared in {product_names[dup[0]]} separate JSON-LD blocks "
+                     "(theme and plugin both emitting markup?)", url, dup[0][:100])
+
+    def _check_local(self, url: str, node: dict, visible_digits: str):
+        name = str(node.get("name", ""))[:60]
+        addr = node.get("address")
+        if isinstance(addr, list):
+            addr = addr[0] if addr else None
+        if not addr:
+            self.add("info", "28, L5, L15", f"LocalBusiness '{name}' has no address (fine only for a service-area business that hides it)", url)
+        elif isinstance(addr, dict):
+            missing = [k for k in ("streetAddress", "addressLocality", "addressCountry") if not addr.get(k)]
+            if missing:
+                self.add("info", "L15", f"LocalBusiness '{name}' PostalAddress missing {', '.join(missing)}", url)
+        tel = str(node.get("telephone", "") or "")
+        if not tel:
+            self.add("info", "28, L6, L15", f"LocalBusiness '{name}' has no telephone", url)
+        else:
+            d = re.sub(r"\D", "", tel)
+            if len(d) >= 6 and d[-9:] not in visible_digits:
+                self.add("warning", "L14, L15", f"LocalBusiness telephone isn't visible on the page (markup must match visible content)", url, tel)
+        if not (node.get("openingHoursSpecification") or node.get("openingHours")):
+            self.add("info", "L6, L15", f"LocalBusiness '{name}' declares no opening hours", url)
+        if node.get("aggregateRating") or node.get("review"):
+            self.add("warning", "85, L15", "Self-serving review/rating markup on a LocalBusiness isn't eligible for review stars", url, name)
+
+    def _check_article(self, url: str, node: dict, p: "PageParser"):
+        missing = [k for k in ("headline", "datePublished", "author", "image") if not node.get(k)]
+        if missing:
+            self.add("info", "102, 147, P14", f"Article markup missing {', '.join(missing)} (descriptive only; not required for Top Stories)", url)
+        dp, dm = str(node.get("datePublished", "")), str(node.get("dateModified", ""))
+        if dp and dm and dm[:10] < dp[:10]:
+            self.add("warning", "147, P2", "dateModified is earlier than datePublished", url, f"{dp} / {dm}")
+        robots = (p.meta(name="robots") or "").lower()
+        if "max-image-preview:large" not in robots and "noindex" not in robots:
+            self.add("info", "P5, P15", "Article without max-image-preview:large (needed for large Discover previews)", url)
+        if str(node.get("isAccessibleForFree", "")).lower() in ("false", "0") and not node.get("hasPart"):
+            self.add("warning", "P16", "isAccessibleForFree=false without hasPart/cssSelector marking the gated section (paywall vs cloaking)", url)
+
+    def _check_product(self, url: str, node: dict, visible: str):
+        name = str(node.get("name", ""))[:60]
+        if not node.get("name"):
+            self.add("warning", "71, E13", "Product without name", url)
+        if not node.get("image"):
+            self.add("warning", "71, E11, E13", f"Product '{name}' without image (required for merchant listings)", url)
+        if not any(node.get(k) for k in ("gtin", "gtin8", "gtin12", "gtin13", "gtin14", "mpn", "isbn")):
+            self.add("info", "E8", f"Product '{name}' has no GTIN/MPN (fine if none exists; never invent one)", url)
+        offers = node.get("offers")
+        if not offers:
+            if not node.get("hasVariant"):
+                self.add("info", "71, E13", f"Product '{name}' has no offers: at most a Product snippet, not a merchant listing", url)
+            return
+        for off in (offers if isinstance(offers, list) else [offers]):
+            if not isinstance(off, dict):
+                continue
+            spec = off.get("priceSpecification")
+            spec = (spec[0] if isinstance(spec, list) and spec else spec) or {}
+            spec = spec if isinstance(spec, dict) else {}
+            price = next((x for x in (off.get("price"), off.get("lowPrice"), spec.get("price")) if x not in (None, "")), None)
+            if price is None:
+                self.add("warning", "71, E12, E13", f"Product '{name}' offer without price", url)
+            elif not _price_visible(price, visible):
+                self.add("info", "E12, E16", f"Product '{name}' price {price} not found in the visible text (check page, markup and feed agree)", url)
+            if not (off.get("priceCurrency") or spec.get("priceCurrency")):
+                self.add("warning", "71, E13", f"Product '{name}' offer without priceCurrency", url)
+            if not off.get("availability"):
+                self.add("info", "71, E12, E17", f"Product '{name}' offer without availability", url)
 
     def check_headers(self, url: str, r: Response):
         h = r.headers
@@ -758,6 +954,29 @@ class Audit:
             if orphans:
                 self.add("warning", "17, 82", f"{len(orphans)} sitemap URLs are not reachable by links from the start page (possible orphans)",
                          orphans[0], "; ".join(orphans[:5]))
+        params = defaultdict(set)
+        for p in pages:
+            for link, _t, _r in p.internal_links:
+                q = urllib.parse.urlsplit(link).query
+                for k, _v in urllib.parse.parse_qsl(q, keep_blank_values=True):
+                    params[k].add(norm(link))
+        if params:
+            def kind(k):
+                kl = k.lower()
+                return ("tracking" if TRACKING_PARAMS.match(k) else "sort" if kl in SORT_PARAMS
+                        else "pagination" if kl in PAGE_PARAMS else "filter/other")
+            self.site["url_parameters"] = {k: {"kind": kind(k), "distinct_urls": len(v)}
+                                           for k, v in sorted(params.items(), key=lambda kv: -len(kv[1]))}
+            tracking = [k for k in params if kind(k) == "tracking"]
+            if tracking:
+                self.add("warning", "20, E5", "Internal links carry tracking parameters (split signals, waste crawl)", "",
+                         ", ".join(tracking[:5]))
+            facety = {k: len(v) for k, v in params.items() if kind(k) in ("sort", "filter/other")}
+            total = len(set().union(*(params[k] for k in facety))) if facety else 0
+            if total:
+                sev = "warning" if total >= 50 else "info"
+                self.add(sev, "20, E5", f"{total} distinct parameterised internal URLs (sort/filter): confirm a crawl/index policy per parameter",
+                         "", ", ".join(f"{k} ({n})" for k, n in sorted(facety.items(), key=lambda kv: -kv[1])[:6]))
         ext = Counter(link for p in pages for link, _t, _r in p.external_links)
         self.site["external_links_unique"] = len(ext)
 
@@ -786,6 +1005,41 @@ def jsonld_types(data) -> list[str]:
         if "@graph" in data:
             out.extend(jsonld_types(data["@graph"]))
     return out
+
+
+def _types(node: dict) -> list:
+    t = node.get("@type")
+    return [str(x) for x in t] if isinstance(t, list) else ([str(t)] if t else [])
+
+
+def jsonld_nodes(data) -> list:
+    """Every dict node with an @type, including nested ones (offers, hasVariant, @graph...)."""
+    out, stack = [], [data]
+    while stack:
+        d = stack.pop()
+        if isinstance(d, list):
+            stack.extend(d)
+        elif isinstance(d, dict):
+            if d.get("@type"):
+                out.append(d)
+            stack.extend(v for v in d.values() if isinstance(v, (dict, list)))
+    return out
+
+
+def _price_visible(price, text: str) -> bool:
+    try:
+        target = round(float(str(price).replace(",", ".")), 2)
+    except ValueError:
+        return True  # unparseable: don't guess
+    seen = set()
+    for m in re.findall(r"\d[\d.,\u00a0 ]*", text):
+        s = m.strip().replace("\u00a0", "").replace(" ", "").rstrip(".,")
+        for dec, th in ((".", ","), (",", ".")):
+            try:
+                seen.add(round(float(s.replace(th, "").replace(dec, ".")), 2))
+            except ValueError:
+                pass
+    return target in seen
 
 
 def parse_robots(text: str) -> dict:
@@ -868,6 +1122,26 @@ def render_markdown(audit: Audit, start: str) -> str:
         if rb.get("crawl_delay"):
             lines.append(f"- crawl-delay: {rb['crawl_delay']}")
         lines += ["", "_See references/engines/bing.md for B-practices._", ""]
+    rm = audit.site.get("redirect_map")
+    if rm:
+        c = rm["counts"]
+        lines += ["## Redirect map", "", f"- File: {rm['file']} · rows: {rm['rows']} · ok: {c.get('ok', 0)} · critical: "
+                  f"{c.get('critical', 0)} · warning: {c.get('warning', 0)} · info: {c.get('info', 0)}", ""]
+        bad = [x for x in rm["results"] if x["problems"]]
+        if bad:
+            lines += ["| Old URL | Expected | First | Hops | Final | Status | Problems |", "|---|---|---|---|---|---|---|"]
+            lines += [f"| {x['old']} | {x['expected']} | {x['first']} | {x['hops']} | {x['final']} | {x['final_status']} | {x['problems']} |"
+                      for x in bad[:100]]
+            lines.append("")
+        lines += ["_Rules: permanent single-hop 301/308 to an equivalent destination that returns 200; 404/410 for retired "
+                  "pages without substitute; never the home page as a catch-all (`playbooks/migrations.md` M7–M8)._", ""]
+    up = audit.site.get("url_parameters")
+    if up:
+        lines += ["## URL parameters in internal links", "", "| Parameter | Kind | Distinct URLs |", "|---|---|---|"]
+        lines += [f"| `{k}` | {v['kind']} | {v['distinct_urls']} |" for k, v in list(up.items())[:20]]
+        lines += ["", "_Decide per parameter: curated indexable facet, controlled combination, canonical-only (tracking) or 404 "
+                  "(impossible filter). Don't block already-indexed facets in robots.txt before removing them "
+                  "(practice 20, `verticals/ecommerce.md` E5)._", ""]
     sm = audit.site.get("sitemap")
     if sm:
         lines += ["## Sitemap", "", f"- Files: {', '.join(sm['files'])}", f"- URLs listed: {sm['url_count']}", ""]
@@ -905,12 +1179,32 @@ def main(argv=None) -> int:
     ap.add_argument("--skip-variants", action="store_true", help="Don't test http/https/www variants")
     ap.add_argument("--skip-sitemap", action="store_true", help="Don't download the sitemap")
     ap.add_argument("--indexnow-key", help="IndexNow key to verify at /<key>.txt on the audited host")
+    ap.add_argument("--redirect-map", help="CSV old_url,new_url[,expected_status] to validate after a migration "
+                                           "(empty new_url = retired page)")
     ap.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     args = ap.parse_args(argv)
 
-    if not args.url and not args.urls:
-        ap.error("provide a URL or --urls file.txt")
+    if not args.url and not args.urls and not args.redirect_map:
+        ap.error("provide a URL, --urls file.txt or --redirect-map map.csv")
     audit = Audit(args.user_agent, args.timeout)
+
+    if args.redirect_map and not args.url and not args.urls:
+        audit.check_redirect_map(args.redirect_map)
+        start = args.redirect_map
+        report = render_markdown(audit, start)
+        if args.output:
+            with open(args.output, "w", encoding="utf-8") as fh:
+                fh.write(report)
+            print(f"Report written to {args.output}")
+        else:
+            print(report)
+        if args.json:
+            with open(args.json, "w", encoding="utf-8") as fh:
+                json.dump({"start": start, "site": audit.site, "findings": [asdict(x) for x in audit.findings]},
+                          fh, ensure_ascii=False, indent=2, default=str)
+        if args.fail_on == "none":
+            return 0
+        return 1 if any(SEVERITY_ORDER[x.severity] <= SEVERITY_ORDER[args.fail_on] for x in audit.findings) else 0
 
     if args.urls:
         with open(args.urls, encoding="utf-8") as fh:
@@ -931,6 +1225,8 @@ def main(argv=None) -> int:
         sm_urls = [] if args.skip_sitemap else audit.check_sitemaps(base, sitemaps)
         if args.indexnow_key:
             audit.check_indexnow(base, args.indexnow_key)
+        if args.redirect_map:
+            audit.check_redirect_map(args.redirect_map, base)
         if args.crawl > 1:
             audit.crawl(base if norm(base) != norm(start) else start, args.crawl, sm_urls)
 
