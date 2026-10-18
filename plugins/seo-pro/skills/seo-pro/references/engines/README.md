@@ -5,14 +5,16 @@ The 160 practices in `phase-1/2/3` are the **shared core**: they work for every 
 | File | Engine(s) | Practice IDs | Status |
 |---|---|---|---|
 | `bing.md` | Bing, Microsoft Copilot, and products that license Bing results | B1–B24 | Available |
+| `ai-search.md` | AI answer engines: Google AI Overviews / AI Mode, ChatGPT Search, Perplexity, Claude with web search (Copilot via `bing.md`) — access funnel, per-agent controls, measurement protocol | A1–A18 | Available |
 
-New engines are added as their own file with their own ID prefix (e.g. `chatgpt.md` → C1…), plus a row in this table and a column in the matrix below. Never renumber the shared core.
+New engines are added as their own file with their own ID prefix (e.g. `yandex.md` → Y1…), plus a row in this table and a column in the matrix below. Never renumber the shared core.
 
 ## Step 0 of every job: decide the target engines
 
 Ask (or infer from the market) which engines matter. Defaults:
 
-- **Every site:** Google + Bing. Bing is small in many markets, but its index also feeds Microsoft Copilot and several other search and AI products, so ignoring it means ignoring a whole family of surfaces.
+- **Every site:** Google + Bing, plus the AI answer engines that matter for the audience (`ai-search.md` A1).
+- **Classic engines:** Google + Bing. Bing is small in many markets, but its index also feeds Microsoft Copilot and several other search and AI products, so ignoring it means ignoring a whole family of surfaces.
 - **Markets with other leaders** (e.g. Yandex, Naver, Baidu, Seznam): flag that the skill doesn't yet have a layer for them and apply the shared core.
 
 Then read the shared practice **and** the engine layer for anything you implement. The engine layer only lists what changes.
@@ -40,7 +42,8 @@ Only rows where behaviour differs or each engine has its own tool. Everything el
 | JavaScript rendering | Renders, deferred | Renders less reliably; guidelines warn against hiding critical content behind client-side rendering | SSR/SSG for everything indexable (already the core rule) | 25, 127, B7 |
 | Snippet / AI directives | `nosnippet`, `max-snippet`, `data-nosnippet`; `noarchive` has no AI effect | `noarchive` → **excluded from Copilot answers and grounding**; `nocache` → Copilot may use only URL, title and snippet; `nosnippet`/`data-nosnippet` limit citation quality | Never add `noarchive`/`nocache` to content that should be cited; use them deliberately to opt out | 37, B8 |
 | AI training opt-out | `Google-Extended` (doesn't affect AI Overviews) | No separate token; control via `noarchive`/`nocache` | Document the decision per engine | 37, B8 |
-| AI visibility reporting | AI Overviews/AI Mode counted inside Search Console performance | **AI Performance** report: citations, cited pages, grounding queries (preview, Feb 2026) | Track both; Bing gives the richer citation data | 148, B9 |
+| AI inclusion control | Search Console **Search generative AI control** (include/exclude site from AI Overviews, AI Mode, Discover gen-AI; default include) | No site-level switch; `noarchive`/`nocache` per page | Check the GSC control; use Bing directives deliberately | A3, B8 |
+| AI visibility reporting | Search Console **Generative AI performance** report (impressions, pages, country, device; global since 31 Aug 2026) | **AI Performance** report: citations, cited pages, grounding queries (preview, Feb 2026) | Track both; Bing gives the richer citation data | 148, B9 |
 | Ranking factors (published) | No ordered list | Publishes main parameters: relevance, quality & credibility, user engagement, freshness, location & language, page load time | Shared core already covers them; Bing makes engagement, freshness and speed explicit | B10 |
 | Hosting location | Not a meaningful signal | "Where the page is hosted" listed under location | Host in-market or use a CDN with local edge; keep ccTLD/hreflang/lang signals | 10, 11, B11 |
 | Language/region signals | `hreflang` (primary), content | `<html lang>`, `content-language`, content; Bing has historically treated hreflang as a weaker hint | Emit `hreflang` **and** correct `lang` (+ optional `content-language`) | 134–137, B12 |
@@ -51,3 +54,15 @@ Only rows where behaviour differs or each engine has its own tool. Everything el
 | AI manipulation | Spam policies cover AI Overviews/AI Mode (May 2026) | "Prompt injection and AI manipulation" explicitly named | No hidden instructions to models, anywhere | 61, 67, B17 |
 | Crawl control & tools | Crawl stats; no rate setting | Crawl Control (hourly rate), Block URLs, robots.txt tester, Verify Bingbot, Site Scan, Keyword Research, Backlinks, Recommendations, Clarity | Use them in audits | B18–B21 |
 | Video / news | Video sitemaps, `VideoObject`; Publisher Center | mRSS feeds; Bing News PubHub | Implement the engine-specific feed only if video/news matters | 146, B22, B23 |
+
+## AI answer engines — controls matrix
+
+| Topic | Google AI features | Copilot | ChatGPT Search | Perplexity | Claude | Practices |
+|---|---|---|---|---|---|---|
+| Search / citation agent | `Googlebot` | `bingbot` | `OAI-SearchBot` | `PerplexityBot` | `Claude-SearchBot` | A2–A6, B4 |
+| Training agent | `Google-Extended` (no Search effect) | — (`noarchive`/`nocache`) | `GPTBot` | — | `ClaudeBot` | A2 |
+| User-initiated fetch | — | — | `ChatGPT-User` (robots may not apply) | `Perplexity-User` (generally ignores robots) | `Claude-User` | A2, A5 |
+| Site-level opt-out | GSC generative AI control | page directives | robots.txt (+ `noindex` to hide links) | robots.txt | robots.txt per subdomain | A3, A4, B8 |
+| Owner reporting | GSC Generative AI performance | BWT AI Performance | none (referral `utm_source=chatgpt.com`) | none | none | A16, B9 |
+
+Rule of thumb: decide **search**, **training** and **user fetch** separately for each operator, verify bots by user agent **and** published IP, and protect private content with authentication, never robots.txt.
