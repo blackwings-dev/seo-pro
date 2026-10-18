@@ -1,6 +1,6 @@
 ---
 name: seo-pro
-description: End-to-end SEO — technical, content, authority, local, e-commerce, SaaS and services, news publishers, YMYL topics, video/YouTube and images, AI search (AI Overviews, Copilot, ChatGPT, Perplexity, Claude) and other engines (Yandex, Baidu, Naver) — with 160 verifiable practices, an operating plan by business type, playbooks for migrations, measurement, reputation, programmatic pages and governance, code guides, an auditor and Search Console/Bing data tools. Use it whenever the user wants to rank a site, audit or plan SEO, launch or migrate a site, fix indexing, Core Web Vitals, metadata, sitemaps, robots.txt, canonicals, hreflang, structured data, internal links, keywords, content for Google or AI, backlinks, PR, reviews, E-E-A-T, Search Console, GA4 or SEO tests, Google Business Profile, Maps, product pages, facets, Merchant Center, Google News, Discover, AI crawlers or citations, or traffic drops — even without saying "SEO" (e.g. "Google isn't indexing my site", "we're moving to Shopify").
+description: End-to-end SEO — technical, content, authority, local, e-commerce, SaaS and services, news publishers, YMYL topics, video/YouTube and images, AI search (AI Overviews, Copilot, ChatGPT, Perplexity, Claude) and other engines (Yandex, Baidu, Naver) — with 160 verifiable practices, an operating plan by business type, playbooks for migrations, measurement, reputation, programmatic pages and governance, an auditor and Search Console/Bing data tools. Use it whenever the user wants to rank a site, audit or plan SEO, launch or migrate a site, fix indexing, Core Web Vitals, metadata, sitemaps, robots.txt, canonicals, structured data, internal links, content for Google or AI, backlinks, reviews, E-E-A-T, Search Console, Google Business Profile, product pages, facets, Google News, Discover, AI crawlers or citations, or traffic drops — even without saying "SEO" (e.g. "Google isn't indexing my site").
 license: MIT
 ---
 
@@ -129,6 +129,7 @@ State these up front, because timelines are where SEO disappoints most:
 
 ## Always avoid
 
+- Expecting FAQ rich results: Google stopped showing them in Search on 7 May 2026 (HowTo was retired in 2023).
 - Recommending anything listed in `references/myths.md` (Indexing API for regular pages, bumping publish dates without real changes, pre-emptive disavows, expecting FAQ rich results or star ratings for your own business, fake urgency or scarcity…).
 - Mass-producing pages mainly to manipulate rankings without adding user value: that is *scaled content abuse*, whether humans, automation or both wrote them.
 - Adding `noindex`, editing `robots.txt`, deleting pages or changing URLs in production without the user's confirmation: these changes take weeks to undo.
