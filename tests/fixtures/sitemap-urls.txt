@@ -1,0 +1,3 @@
+https://www.example.com/
+https://www.example.com/blog/post-1
+https://www.example.com/about

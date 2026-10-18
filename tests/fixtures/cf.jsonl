@@ -1,0 +1,2 @@
+{"ClientIP":"66.249.66.1","ClientRequestHost":"www.example.com","ClientRequestMethod":"GET","ClientRequestURI":"/a?page=2","EdgeResponseStatus":200,"ClientRequestUserAgent":"Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)","EdgeStartTimestamp":1791100800000000000}
+{"ClientIP":"66.249.66.1","ClientRequestHost":"cdn.example.com","ClientRequestMethod":"GET","ClientRequestURI":"/b","EdgeResponseStatus":200,"ClientRequestUserAgent":"Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)","EdgeStartTimestamp":1791100800000000000}
