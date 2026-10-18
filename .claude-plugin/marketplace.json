@@ -9,7 +9,7 @@
     {
       "name": "seo-pro",
       "source": "./plugins/seo-pro",
-      "description": "Engine-aware SEO for Claude Code: 160 core practices plus Bing/Copilot layer, automated auditor, Next.js & multi-stack guides, and AI-search (GEO) optimisation"
+      "description": "Evidence-led, engine-aware SEO for Claude Code: 160 core practices, Bing/Copilot and AI answer engine layers (ChatGPT, Perplexity, Claude, Google AI), site auditor and stack guides"
     }
   ]
 }
