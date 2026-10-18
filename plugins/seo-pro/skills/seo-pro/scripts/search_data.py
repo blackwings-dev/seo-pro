@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import http.client
 import json
 import os
 import re
@@ -36,9 +37,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 GSC_BASE = os.environ.get("GSC_API_BASE", "https://www.googleapis.com/webmasters/v3")
 GSC_INSPECT = os.environ.get("GSC_INSPECT_URL", "https://searchconsole.googleapis.com/v1/urlInspection/index:inspect")
@@ -63,8 +64,11 @@ def _request(url: str, method: str = "GET", body: dict | None = None, headers: d
         req = urllib.request.Request(url, data=data, headers=hdrs, method=method)
         try:
             with urllib.request.urlopen(req, timeout=60) as r:
-                raw = r.read().decode("utf-8") or "{}"
+                raw = r.read().decode("utf-8", "replace") or "{}"
+            try:
                 return json.loads(raw)
+            except json.JSONDecodeError:
+                raise ApiError(f"Non-JSON response from {url.split('?')[0]}: {raw[:200]!r}") from None
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")[:500]
             if e.code in (429, 500, 503) and attempt < retries - 1:
@@ -76,6 +80,11 @@ def _request(url: str, method: str = "GET", body: dict | None = None, headers: d
                 time.sleep(2 ** attempt)
                 continue
             raise ApiError(f"Network error for {url.split('?')[0]}: {e.reason}") from None
+        except (TimeoutError, http.client.HTTPException, ConnectionError) as e:
+            if attempt < retries - 1:
+                time.sleep(2 ** attempt)
+                continue
+            raise ApiError(f"Network error for {url.split('?')[0]}: {type(e).__name__}: {e}") from None
     raise ApiError("unreachable")
 
 
@@ -92,6 +101,8 @@ def _site_path(site: str) -> str:
 
 def _write_csv(rows: list[dict], out: str | None, fields: list[str] | None = None):
     fields = fields or (list(rows[0].keys()) if rows else [])
+    if not out and hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", newline="")  # Windows consoles: no \r\r\n, no cp1252
     fh = open(out, "w", newline="", encoding="utf-8") if out else sys.stdout
     w = csv.DictWriter(fh, fieldnames=fields, extrasaction="ignore")
     w.writeheader()
@@ -161,7 +172,7 @@ def gsc_query(args):
 
 
 def gsc_inspect(args):
-    with open(args.urls, encoding="utf-8") as fh:
+    with open(args.urls, encoding="utf-8-sig") as fh:
         urls = [l.strip() for l in fh if l.strip() and not l.startswith("#")]
     rows = []
     for u in urls:
@@ -190,7 +201,11 @@ def _bing_value(v):
     if isinstance(v, str):
         m = _BING_DATE.search(v)
         if m:
-            return datetime.fromtimestamp(int(m.group(1)) / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
+            tz = timezone.utc
+            if m.group(2):  # the offset tells which local day the value refers to
+                sign = 1 if m.group(2)[0] == "+" else -1
+                tz = timezone(sign * timedelta(hours=int(m.group(2)[1:3]), minutes=int(m.group(2)[3:5])))
+            return datetime.fromtimestamp(int(m.group(1)) / 1000, tz=tz).strftime("%Y-%m-%d")
     return v
 
 
@@ -243,7 +258,9 @@ def compare(args):
     mapping = {}
     if args.map:
         for r in _load(args.map):
-            mapping[r.get("old_url") or r.get("old")] = r.get("new_url") or r.get("new")
+            old = (r.get("old_url") or r.get("old") or "").strip()
+            if old and not old.startswith("#"):
+                mapping[old] = (r.get("new_url") or r.get("new") or "").strip()
     rows = []
     for k in set(before) | set(after) | set(mapping):
         target = mapping.get(k, k)
@@ -319,4 +336,10 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(130)
+    except (OSError, ValueError) as e:  # missing files, bad CSV/filters: exit 3, distinct from API errors (2)
+        print(f"error: {type(e).__name__}: {e}", file=sys.stderr)
+        sys.exit(3)

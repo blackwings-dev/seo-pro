@@ -16,7 +16,7 @@ Usage:
   python3 seo_audit.py --redirect-map redirects.csv --fail-on critical   # validate a migration map
 
 Exit code: 0 when there are no findings at the --fail-on level (default "none"), 1 when there are,
-2 when the start URL could not be fetched.
+2 when the start URL could not be fetched, 3 on an error (missing input file, unexpected failure).
 """
 from __future__ import annotations
 
@@ -32,13 +32,14 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zlib
 from collections import Counter, defaultdict, deque
 from dataclasses import dataclass, field, asdict
 from html.parser import HTMLParser
 from typing import Optional
 from xml.etree import ElementTree
 
-__version__ = "1.3.0"
+__version__ = "1.3.1"
 
 UA_DEFAULT = ("Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 "
               "(KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36 (compatible; seo-pro-audit/1.0)")
@@ -100,6 +101,7 @@ class Response:
     body: bytes
     elapsed: float
     error: Optional[str] = None
+    truncated: bool = False
 
     def header(self, name: str) -> str:
         return self.headers.get(name.lower(), "")
@@ -128,13 +130,22 @@ def fetch(url: str, ua: str, timeout: float, method: str = "GET", extra_headers:
         reason = getattr(e, "reason", e)
         return Response(url, 0, {}, b"", time.monotonic() - t0, error=str(reason))
     elapsed = time.monotonic() - t0
+    truncated = len(raw) >= max_bytes
     hmap = {k.lower(): v for k, v in hdrs.items()} if hdrs else {}
     if hmap.get("content-encoding", "").lower() == "gzip" and raw:
+        raw = _gunzip(raw)
+    return Response(url, status, hmap, raw, elapsed, truncated=truncated)
+
+
+def _gunzip(raw: bytes) -> bytes:
+    """Decompress gzip, tolerating bodies truncated at max_bytes (returns what could be decoded)."""
+    try:
+        return gzip.decompress(raw)
+    except (OSError, EOFError, zlib.error):
         try:
-            raw = gzip.decompress(raw)
-        except OSError:
-            pass
-    return Response(url, status, hmap, raw, elapsed)
+            return zlib.decompressobj(16 + zlib.MAX_WBITS).decompress(raw)
+        except zlib.error:
+            return raw
 
 
 def fetch_follow(url: str, ua: str, timeout: float, max_hops: int = 10):
@@ -216,6 +227,8 @@ class PageParser(HTMLParser):
             self.links.append(a)
         elif tag == "img":
             a["_index"] = len(self.images)
+            a["_chrome"] = any(t in ("nav", "header", "footer", "aside") for t in self._stack)
+            a["_in_main"] = "main" in self._stack
             self.images.append(a)
         elif tag in ("h1", "h2", "h3", "h4", "h5", "h6"):
             self._cur_heading = [int(tag[1]), ""]
@@ -326,6 +339,8 @@ class Audit:
         self.site: dict = {}
         self._analyzed_finals: set[str] = set()
         self._entities_checked: set[str] = set()
+        self._lazy_reported: set[str] = set()
+        self.delay = 0.0
 
     def add(self, severity, practices, message, url="", evidence=""):
         self.findings.append(Finding(severity, practices, message, url, str(evidence)[:300]))
@@ -375,12 +390,12 @@ class Audit:
                 new = urllib.parse.urljoin(base or old, new) if new else ""
                 exp = rec[2].strip() if len(rec) > 2 and rec[2].strip() else ""
                 rows.append((old, new, exp))
-        olds = Counter(norm(o) for o, _n, _e in rows)
+        olds = Counter(norm_strict(o) for o, _n, _e in rows)
         dup = [o for o, c in olds.items() if c > 1]
         if dup:
             self.add("warning", "M5", f"{len(dup)} old URLs appear more than once in the redirect map", path, ", ".join(dup[:3]))
-        moved = {norm(o) for o, n, _e in rows if n and norm(n) != norm(o)}
-        chained = sorted({n for o, n, _e in rows if n and norm(n) in moved and norm(n) != norm(o)})
+        moved = {norm_strict(o) for o, n, _e in rows if n and norm_strict(n) != norm_strict(o)}
+        chained = sorted({n for o, n, _e in rows if n and norm_strict(n) in moved and norm_strict(n) != norm_strict(o)})
         if chained:
             self.add("warning", "M5, M8", f"{len(chained)} destinations are themselves old URLs in the map (planned chains)",
                      path, ", ".join(chained[:3]))
@@ -393,7 +408,7 @@ class Audit:
             final_url, final_status = (r.url, r.status) if not r.error else (old, f"ERROR {r.error}")
             problems = []
             retire = not new
-            unchanged = bool(new) and norm(new) == norm(old)
+            unchanged = bool(new) and norm_strict(new) == norm_strict(old)
             if loop:
                 problems.append(("critical", "M8", "redirect loop"))
             elif retire:
@@ -415,7 +430,7 @@ class Audit:
                         problems.append(("warning", "23, B5, M8", f"temporary redirect ({first}) for a permanent move"))
                     if hops > 1:
                         problems.append(("warning", "23, M8", f"{hops} hops instead of 1"))
-                    if norm(final_url) != norm(new):
+                    if norm_strict(final_url) != norm_strict(new):
                         sev = "critical"
                         if urllib.parse.urlsplit(final_url).path in ("", "/") and urllib.parse.urlsplit(new).path not in ("", "/"):
                             problems.append((sev, "M7", "lands on the home page instead of the mapped destination (soft-404 risk)"))
@@ -503,10 +518,7 @@ class Audit:
                 continue
             body = r.body
             if sm.endswith(".gz"):
-                try:
-                    body = gzip.decompress(body)
-                except OSError:
-                    pass
+                body = _gunzip(body)
             try:
                 root = ElementTree.fromstring(body)
             except ElementTree.ParseError as e:
@@ -532,14 +544,17 @@ class Audit:
         if foreign:
             self.add("warning", "2, 18", f"{len(foreign)} sitemap URLs are on a different host than the audited one",
                      base, foreign[0])
-        bad = []
+        bad, redirected_only = [], []
         step = max(1, len(urls) // sample)
         for u in urls[::step][:sample]:
             r = fetch(u, self.ua, self.timeout)
             if r.error or r.status != 200:
                 bad.append(f"{u} [{r.status or r.error}]")
+                if not r.error and 300 <= r.status < 400:
+                    redirected_only.append(u)
         if bad:
-            self.add("critical" if len(bad) > 2 else "warning", "2",
+            sev = "critical" if len(bad) - len(redirected_only) > 2 else "warning"
+            self.add(sev, "2",
                      f"{len(bad)} URLs from a sitemap sample don't return 200 (sitemaps should only list canonical 200 URLs)",
                      base, "; ".join(bad[:5]))
         return urls
@@ -575,6 +590,9 @@ class Audit:
         if "html" not in ctype:
             return pr
         html = decode_body(r)
+        if r.truncated:
+            self.add("warning", "126, 6", "HTML response is larger than 5 MB as transferred: analysis used a truncated copy "
+                     "and the page is very heavy for users and crawlers", url)
         p = PageParser()
         try:
             p.feed(html)
@@ -661,7 +679,7 @@ class Audit:
             if not any(norm(urllib.parse.urljoin(final, l.get("href", ""))) == norm(final) for l in alts):
                 self.add("warning", "137", "hreflang set does not reference the page itself", url)
             for lg in langs:
-                if lg in ("en-uk", "es-eu", "en-eu") or not re.fullmatch(r"x-default|[a-z]{2,3}(-[a-z]{2}|-[a-z]{4})?", lg):
+                if lg in ("en-uk", "es-eu", "en-eu") or not re.fullmatch(r"x-default|[a-z]{2,3}(-[a-z]{4})?(-([a-z]{2}|\d{3}))?", lg):
                     self.add("warning", "137", f"Invalid hreflang code: {lg}", url)
         if depth == 0 and deep_checks:
             has_meta = bool(p.meta(name="msvalidate.01"))
@@ -711,7 +729,12 @@ class Audit:
             self.add("warning", "14", f"{len(no_dims)} images without width/height (CLS risk)", url,
                      ", ".join(no_dims[:3]))
         content_imgs = [i for i in imgs if not i.get("src", "").startswith("data:")]
-        if content_imgs and content_imgs[0].get("loading", "").lower() == "lazy":
+        main_imgs = [i for i in content_imgs if i.get("_in_main")]
+        content_imgs = main_imgs or [i for i in content_imgs if not i.get("_chrome")]
+        lazy_src = content_imgs[0].get("src", "") if content_imgs else ""
+        if (content_imgs and content_imgs[0].get("loading", "").lower() == "lazy"
+                and lazy_src not in self._lazy_reported):
+            self._lazy_reported.add(lazy_src)
             self.add("warning", "13, 70", "The document's first image has loading=lazy (delays LCP if it is the LCP image)",
                      url, content_imgs[0].get("src", "")[:100])
 
@@ -769,9 +792,22 @@ class Audit:
         visible_digits = re.sub(r"\D", "", visible) + " " + " ".join(
             re.sub(r"\D", "", h or "") for h, _r, _t in p.anchors if (h or "").lower().startswith("tel:"))
         product_names = Counter()
-        for bi, block in enumerate(blocks):
+        parent = {}
+        for block in blocks:
+            for node in jsonld_nodes(block):
+                if "productgroup" in {t.lower() for t in _types(node)}:
+                    hv = node.get("hasVariant") or []
+                    for v in (hv if isinstance(hv, list) else [hv]):
+                        if isinstance(v, dict):
+                            parent[id(v)] = node
+        for block in blocks:
             names_here = set()
             for node in jsonld_nodes(block):
+                if not (set(node) - {"@type", "@id", "url", "sameAs", "@context"}):
+                    continue  # a reference to an entity described elsewhere (e.g. a variant URL), not a description
+                grp = parent.get(id(node))
+                if grp:  # variants inherit group-level properties (Google product variants docs)
+                    node = {**{k: grp[k] for k in ("name", "image", "brand", "description") if k in grp}, **node}
                 types = {t.lower() for t in _types(node)}
                 if types & LOCAL_TYPES or any(x.endswith("store") and x != "onlinestore" for x in types):
                     self._check_local(url, node, visible_digits)
@@ -805,7 +841,7 @@ class Audit:
         else:
             d = re.sub(r"\D", "", tel)
             if len(d) >= 6 and d[-9:] not in visible_digits:
-                self.add("warning", "L14, L15", f"LocalBusiness telephone isn't visible on the page (markup must match visible content)", url, tel)
+                self.add("warning", "L14, L15", "LocalBusiness telephone isn't visible on the page (markup must match visible content)", url, tel)
         if not (node.get("openingHoursSpecification") or node.get("openingHours")):
             self.add("info", "L6, L15", f"LocalBusiness '{name}' declares no opening hours", url)
         if node.get("aggregateRating") or node.get("review"):
@@ -888,11 +924,14 @@ class Audit:
         else:
             self.add("info", "125", "No ETag or Last-Modified (304 responses impossible)", url)
         probe = urllib.parse.urljoin(final, "/this-url-should-not-exist-" + str(int(time.time())))
-        rp = fetch(probe, self.ua, self.timeout)
-        if rp.status == 200:
-            self.add("critical", "9, 26", "Non-existent URLs return 200 (soft 404)", probe)
-        elif rp.status in (301, 302, 307, 308):
-            self.add("warning", "9", "Non-existent URLs redirect instead of returning 404", probe, rp.header("location"))
+        rp, pchain = fetch_follow(probe, self.ua, self.timeout)
+        redirected = len(pchain) > 1
+        if not rp.error and rp.status == 200:
+            msg = "Non-existent URLs redirect to a 200 page (soft 404)" if redirected else "Non-existent URLs return 200 (soft 404)"
+            self.add("critical", "9, 26", msg, probe, " → ".join(f"{u} [{s}]" for u, s in pchain))
+        elif redirected and not rp.error and rp.status in (404, 410):
+            self.add("info", "9, 23", f"Non-existent URLs redirect ({pchain[0][1]}) before returning {rp.status} — "
+                     "usually a trailing-slash rule; fine, though a direct 404 saves a hop", probe)
 
     def check_indexnow(self, base: str, key: str):
         url = urllib.parse.urljoin(base, f"/{key}.txt")
@@ -905,13 +944,19 @@ class Audit:
 
     # ------------------------------------------------------------------ crawl
     def crawl(self, start: str, limit: int, sitemap_urls: list[str]):
-        start_host = urllib.parse.urlsplit(start).hostname
+        first = self.pages.get(start)
+        final_start = first.final_url if first else start
+        start_host = urllib.parse.urlsplit(final_start).hostname  # follow the site the start URL redirects to
         q = deque([(start, 0)])
-        seen = {norm(start)}
+        seen = {norm(start), norm(final_start)}
         inbound = defaultdict(set)
         while q and len(self.pages) < limit:
             url, depth = q.popleft()
-            pr = self.pages.get(url) or self.audit_page(url, depth)
+            pr = self.pages.get(url)
+            if pr is None:
+                if self.delay:
+                    time.sleep(self.delay)
+                pr = self.audit_page(url, depth)
             if not pr:
                 continue
             pr.depth = depth
@@ -981,6 +1026,12 @@ class Audit:
         self.site["external_links_unique"] = len(ext)
 
 # ------------------------------------------------------------------------------------- helpers
+
+
+def norm_strict(u: str) -> str:
+    """Like norm() but keeps the trailing slash: /a and /a/ are different URLs for redirect maps."""
+    s = urllib.parse.urlsplit(u)
+    return urllib.parse.urlunsplit((s.scheme.lower(), (s.netloc or "").lower(), s.path or "/", s.query, ""))
 
 
 def norm(u: str) -> str:
@@ -1166,9 +1217,12 @@ def render_markdown(audit: Audit, start: str) -> str:
 
 
 def main(argv=None) -> int:
+    if hasattr(sys.stdout, "reconfigure"):  # Windows consoles/pipes default to cp1252: don't crash on emoji labels
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description="Technical SEO audit (seo-pro skill by blackwings.dev)")
     ap.add_argument("url", nargs="?", help="Start URL (e.g. https://example.com)")
     ap.add_argument("--crawl", type=int, default=0, help="Crawl up to N internal pages (0 = start URL only)")
+    ap.add_argument("--delay", type=float, default=0.5, help="Seconds to wait between crawled pages (default 0.5; be polite)")
     ap.add_argument("--urls", help="File with one URL per line to audit without crawling (alert mode)")
     ap.add_argument("--output", help="Write the Markdown report to this path")
     ap.add_argument("--json", help="Write findings as JSON to this path")
@@ -1187,6 +1241,7 @@ def main(argv=None) -> int:
     if not args.url and not args.urls and not args.redirect_map:
         ap.error("provide a URL, --urls file.txt or --redirect-map map.csv")
     audit = Audit(args.user_agent, args.timeout)
+    audit.delay = 0.0 if args.delay < 0 else args.delay
 
     if args.redirect_map and not args.url and not args.urls:
         audit.check_redirect_map(args.redirect_map)
@@ -1207,7 +1262,7 @@ def main(argv=None) -> int:
         return 1 if any(SEVERITY_ORDER[x.severity] <= SEVERITY_ORDER[args.fail_on] for x in audit.findings) else 0
 
     if args.urls:
-        with open(args.urls, encoding="utf-8") as fh:
+        with open(args.urls, encoding="utf-8-sig") as fh:
             urls = [l.strip() for l in fh if l.strip() and not l.startswith("#")]
         for i, u in enumerate(urls):
             audit.audit_page(u, 0, deep_checks=(i == 0))
@@ -1228,7 +1283,7 @@ def main(argv=None) -> int:
         if args.redirect_map:
             audit.check_redirect_map(args.redirect_map, base)
         if args.crawl > 1:
-            audit.crawl(base if norm(base) != norm(start) else start, args.crawl, sm_urls)
+            audit.crawl(start, args.crawl, sm_urls)
 
     report = render_markdown(audit, start)
     if args.output:
@@ -1247,5 +1302,15 @@ def main(argv=None) -> int:
     return 1 if any(SEVERITY_ORDER[x.severity] <= level for x in audit.findings) else 0
 
 
+def _main_safe(argv=None) -> int:
+    try:
+        return main(argv)
+    except KeyboardInterrupt:
+        return 130
+    except Exception as e:  # bad input file, unexpected server response...: distinguishable from findings in CI
+        print(f"error: {type(e).__name__}: {e}", file=sys.stderr)
+        return 3
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(_main_safe())
