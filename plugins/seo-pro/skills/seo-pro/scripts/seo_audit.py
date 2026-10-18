@@ -36,12 +36,20 @@ from html.parser import HTMLParser
 from typing import Optional
 from xml.etree import ElementTree
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 UA_DEFAULT = ("Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 "
               "(KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36 (compatible; seo-pro-audit/1.0)")
-AI_BOTS = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-SearchBot", "Claude-User",
-           "PerplexityBot", "Google-Extended", "CCBot", "Bingbot", "Googlebot"]
+AI_BOTS = ["Googlebot", "Bingbot", "OAI-SearchBot", "PerplexityBot", "Claude-SearchBot",
+           "Google-Extended", "GPTBot", "ClaudeBot", "CCBot",
+           "ChatGPT-User", "Perplexity-User", "Claude-User"]
+BOT_PURPOSE = {"Googlebot": "search (also Google AI features)", "Bingbot": "search (also Copilot)",
+               "OAI-SearchBot": "AI search (ChatGPT)", "PerplexityBot": "AI search (Perplexity)",
+               "Claude-SearchBot": "AI search (Claude)", "Google-Extended": "training / AI use (no Search effect)",
+               "GPTBot": "training (OpenAI)", "ClaudeBot": "training (Anthropic)", "CCBot": "training (Common Crawl)",
+               "ChatGPT-User": "user fetch (robots may not apply)", "Perplexity-User": "user fetch (generally ignores robots)",
+               "Claude-User": "user fetch (Claude)"}
+SEARCH_AI_BOTS = ("OAI-SearchBot", "PerplexityBot", "Claude-SearchBot")
 SEVERITY_ORDER = {"critical": 0, "warning": 1, "info": 2}
 SEV_LABEL = {"critical": "🔴 Critical", "warning": "🟠 Warning", "info": "🔵 Info"}
 
@@ -363,6 +371,10 @@ class Audit:
             rules = groups.get(bot.lower(), star)
             ai[bot] = "blocked" if any(rule == ("disallow", "/") for rule in rules) else "allowed"
         info["bots"] = ai
+        blocked_search = [b for b in SEARCH_AI_BOTS if ai.get(b) == "blocked"]
+        if blocked_search:
+            self.add("warning", "37, A2", "AI search agents blocked: the site can't be cited in those products' search answers (fine only if deliberate)",
+                     url, ", ".join(blocked_search))
         bbot = groups.get("bingbot", star)
         if any(rule == ("disallow", "/") for rule in bbot):
             self.add("critical", "B4", "[Bing] robots.txt blocks Bingbot entirely (also removes the site from Copilot)", url)
@@ -511,15 +523,15 @@ class Audit:
         if not title:
             self.add("critical", "56", "Missing <title>", url)
         elif len(title) < 25:
-            self.add("warning", "56", f"Title too short ({len(title)} characters)", url, title)
+            self.add("info", "56", f"Short title ({len(title)} characters): review whether it describes the page clearly; length alone is not a defect", url, title)
         elif len(title) > 65:
-            self.add("warning", "56", f"Long title ({len(title)} characters; Google will truncate it)", url, title)
+            self.add("info", "56", f"Long title ({len(title)} characters): truncation depends on the result layout; keep the main topic first", url, title)
         desc = " ".join((p.meta(name="description") or "").split())
         pr.description = desc
         if not desc:
             self.add("warning", "56", "Missing meta description", url)
-        elif len(desc) < 70 or len(desc) > 170:
-            self.add("info", "56", f"Meta description is {len(desc)} characters (aim for ~140–160)", url, desc)
+        elif len(desc) < 50 or len(desc) > 320:
+            self.add("info", "56", f"Meta description of {len(desc)} characters: review usefulness (heuristic ~140–160); engines may choose page text instead", url, desc)
         if p.meta(name="keywords"):
             self.add("info", "myths", "Uses meta keywords: ignored by Google and Bing; stuffing can be a Bing spam signal", url)
 
@@ -527,9 +539,9 @@ class Audit:
         h1s = [t for lvl, t in p.headings if lvl == 1]
         pr.h1 = h1s
         if not h1s:
-            self.add("warning", "43", "No H1", url)
+            self.add("info", "43", "No H1: review whether the page has a clear main heading and outline", url)
         elif len(h1s) > 1:
-            self.add("warning", "43", f"{len(h1s)} H1s (one recommended)", url, " | ".join(h1s[:3]))
+            self.add("info", "43", f"{len(h1s)} H1 headings: check the outline is clear (not inherently an SEO defect)", url, " | ".join(h1s[:3]))
         prev = 0
         for lvl, txt in p.headings:
             if prev and lvl > prev + 1:
@@ -582,7 +594,7 @@ class Audit:
                                               "professionalservice", "onlinestore", "website"}:
             self.add("info", "38", "Start page declares no Organization/WebSite JSON-LD", url)
         if "faqpage" in types_lower:
-            self.add("info", "47, 59", "FAQPage: fine for understanding, but Google no longer shows FAQ rich results (May 2026)", url)
+            self.add("info", "47, 59", "FAQPage markup no longer yields Google FAQ rich results (retired 7 May 2026); keep only if it accurately describes visible Q&A and serves another use", url)
         if "howto" in types_lower:
             self.add("info", "59", "HowTo: Google retired this rich result in 2023", url)
 
@@ -840,9 +852,11 @@ def render_markdown(audit: Audit, start: str) -> str:
         lines.append("")
     rb = audit.site.get("robots", {})
     if rb.get("bots"):
-        lines += ["## Crawlers (per robots.txt)", "", "| User agent | Status |", "|---|---|"]
-        lines += [f"| {k} | {v} |" for k, v in rb["bots"].items()]
-        lines += ["", "_Make a deliberate decision about AI crawlers (practice 37)._", ""]
+        lines += ["## Crawlers (per robots.txt)", "", "| User agent | Purpose | Status |", "|---|---|---|"]
+        lines += [f"| {k} | {BOT_PURPOSE.get(k, '')} | {v} |" for k, v in rb["bots"].items()]
+        lines += ["", "_Decide search, training and user-fetch access separately per operator (practice 37, `engines/ai-search.md` A2). "
+                  "robots.txt is public and user fetchers may ignore it: protect private content with authentication. "
+                  "Also check the Search Console generative AI control (A3); it isn't visible from outside._", ""]
     bv = audit.site.get("bing_verification")
     if bv or audit.site.get("indexnow") or (rb.get("crawl_delay")):
         lines += ["## Bing & Copilot", ""]
