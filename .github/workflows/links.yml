@@ -1,0 +1,54 @@
+# Every Monday, checks every source link in the skill, the README and docs/.
+# Broken links (404/410) open or update one issue labelled "broken-links"; it closes itself when they are fixed.
+name: Source links
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Check links
+        id: check
+        run: |
+          set +e
+          python tools/check_links.py --output links.md > /dev/null
+          echo "broken=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update the issue
+        if: steps.check.outputs.broken == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create broken-links --color B60205 --description "Source links that died" 2>/dev/null || true
+          n=$(gh issue list --label broken-links --state open --json number --jq '.[0].number')
+          if [ -n "$n" ]; then
+            gh issue edit "$n" --body-file links.md
+          else
+            gh issue create --title "Broken source links" --label broken-links --body-file links.md
+          fi
+
+      - name: Close the issue when everything is fixed
+        if: steps.check.outputs.broken == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=$(gh issue list --label broken-links --state open --json number --jq '.[0].number' 2>/dev/null)
+          if [ -n "$n" ]; then
+            gh issue close "$n" --comment "All source links answer again ($(date -u +%F))."
+          fi

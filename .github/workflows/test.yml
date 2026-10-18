@@ -1,6 +1,6 @@
-# Checks the scripts and the plugin manifests on every push and pull request.
+# Runs the integrity checks and the test suite on every push and pull request.
 #
-# Nothing here touches a live site or an API: no secrets needed.
+# Nothing here touches a live site or an API: the tests use local fixtures and mock servers, so no secrets are needed.
 name: Test
 
 on:
@@ -29,15 +29,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Compile the scripts
-        run: python -m py_compile plugins/seo-pro/skills/seo-pro/scripts/*.py
+        run: python -m py_compile plugins/seo-pro/skills/seo-pro/scripts/*.py tools/*.py
 
-      - name: Scripts start and print their help
-        run: |
-          python plugins/seo-pro/skills/seo-pro/scripts/seo_audit.py --help > /dev/null
-          python plugins/seo-pro/skills/seo-pro/scripts/search_data.py --help > /dev/null
+      - name: Integrity checks (practice IDs, paths, links, tables, manifests)
+        run: python tools/check_skill.py
 
-      - name: Manifests are valid JSON
-        run: |
-          python -m json.tool .claude-plugin/marketplace.json > /dev/null
-          python -m json.tool plugins/seo-pro/.claude-plugin/plugin.json > /dev/null
-          python -m json.tool evals/evals.json > /dev/null
+      - name: Test suite
+        run: python -m unittest discover -s tests -v
