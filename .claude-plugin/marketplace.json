@@ -1,12 +1,15 @@
 {
   "name": "blackwings-dev",
   "description": "Open source Claude Code plugins and skills by blackwings.dev",
-  "owner": { "name": "blackwings.dev", "url": "https://github.com/blackwings-dev" },
+  "owner": {
+    "name": "blackwings.dev",
+    "url": "https://github.com/blackwings-dev"
+  },
   "plugins": [
     {
       "name": "seo-pro",
       "source": "./plugins/seo-pro",
-      "description": "End-to-end SEO for Claude Code: 160 verifiable practices, an automated auditor, Next.js and multi-stack implementation guides, and AI-search (GEO) optimisation"
+      "description": "Engine-aware SEO for Claude Code: 160 core practices plus Bing/Copilot layer, automated auditor, Next.js & multi-stack guides, and AI-search (GEO) optimisation"
     }
   ]
 }
