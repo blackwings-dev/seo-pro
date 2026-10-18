@@ -14,6 +14,9 @@ Usage:
   python3 seo_audit.py --urls critical.txt --fail-on critical        # for alerts in CI/cron
   python3 seo_audit.py http://localhost:3000 --crawl 50 --skip-variants
   python3 seo_audit.py --redirect-map redirects.csv --fail-on critical   # validate a migration map
+  python3 seo_audit.py https://example.com --crawl 30 --render --html report.html   # raw vs rendered, client report
+
+--render needs Playwright (optional): pip install playwright && python -m playwright install chromium
 
 Exit code: 0 when there are no findings at the --fail-on level (default "none"), 1 when there are,
 2 when the start URL could not be fetched, 3 on an error (missing input file, unexpected failure).
@@ -23,7 +26,9 @@ from __future__ import annotations
 import argparse
 import csv
 import gzip
+import html as htmllib
 import json
+import os
 import re
 import socket
 import ssl
@@ -39,7 +44,7 @@ from html.parser import HTMLParser
 from typing import Optional
 from xml.etree import ElementTree
 
-__version__ = "1.3.1"
+__version__ = "1.4.0"
 
 UA_DEFAULT = ("Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 "
               "(KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36 (compatible; seo-pro-audit/1.0)")
@@ -328,6 +333,67 @@ class PageResult:
     internal_links: list = field(default_factory=list)
     external_links: list = field(default_factory=list)
     jsonld_types: list = field(default_factory=list)
+    rendered: dict = field(default_factory=dict)
+
+
+class Renderer:
+    """Optional headless Chromium (Playwright) to compare the served HTML with the rendered DOM."""
+
+    def __init__(self, ua: str, timeout: float, wait_ms: int = 1500):
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            raise RuntimeError("--render needs Playwright: pip install playwright && python -m playwright install chromium") from None
+        self.timeout_ms = int(timeout * 1000)
+        self.wait_ms = wait_ms
+        self._pw = sync_playwright().start()
+        exe = os.environ.get("SEO_PRO_CHROMIUM") or None
+        self._browser = self._pw.chromium.launch(executable_path=exe) if exe else self._pw.chromium.launch()
+        self._ctx = self._browser.new_context(user_agent=ua, viewport={"width": 412, "height": 915})
+
+    def render(self, url: str) -> tuple[str, str]:
+        page = self._ctx.new_page()
+        try:
+            try:
+                page.goto(url, wait_until="networkidle", timeout=self.timeout_ms)
+            except Exception:  # analytics/long-polling never go idle: use what has rendered so far
+                pass
+            page.wait_for_timeout(self.wait_ms)
+            return page.content(), page.url
+        finally:
+            page.close()
+
+    def close(self):
+        for fn in (self._ctx.close, self._browser.close, self._pw.stop):
+            try:
+                fn()
+            except Exception:
+                pass
+
+
+def page_signals(p: "PageParser", base: str, raw_html: str = "") -> dict:
+    """The SEO-relevant signals of a parsed document, for raw vs rendered comparison."""
+    host = urllib.parse.urlsplit(base).hostname
+    links = set()
+    for href, _rel, _txt in p.anchors:
+        if not href or href.startswith(("#", "mailto:", "tel:", "javascript:", "data:")):
+            continue
+        u = urllib.parse.urljoin(base, href).split("#")[0]
+        if urllib.parse.urlsplit(u).hostname == host:
+            links.add(norm(u))
+    canon = next((l.get("href") for l in p.link_rel("canonical") if l.get("href")), "")
+    robots = " ".join(filter(None, [p.meta(name="robots"), p.meta(name="googlebot")])).lower()
+    types = []
+    for s in p.scripts:
+        if s["attrs"].get("type", "").lower() == "application/ld+json":
+            try:
+                types += jsonld_types(json.loads(s["content"].strip()))
+            except json.JSONDecodeError:
+                pass
+    return {"title": " ".join((p.title or "").split()), "description": " ".join((p.meta(name="description") or "").split()),
+            "canonical": norm(urllib.parse.urljoin(base, canon)) if canon else "", "noindex": "noindex" in robots,
+            "h1": [h for lvl, h in p.headings if lvl == 1], "words": p.word_count, "links": links,
+            "jsonld": sorted(set(types))}
 
 
 class Audit:
@@ -341,6 +407,7 @@ class Audit:
         self._entities_checked: set[str] = set()
         self._lazy_reported: set[str] = set()
         self.delay = 0.0
+        self.renderer: Optional[Renderer] = None
 
     def add(self, severity, practices, message, url="", evidence=""):
         self.findings.append(Finding(severity, practices, message, url, str(evidence)[:300]))
@@ -468,6 +535,11 @@ class Audit:
         text = decode_body(r)
         groups = parse_robots(text)
         sitemaps = re.findall(r"(?im)^\s*sitemap\s*:\s*(\S+)", text)
+        relative = [s for s in sitemaps if not re.match(r"https?://", s, re.I)]
+        if relative:
+            self.add("warning", "2, 4", "Sitemap line in robots.txt is not an absolute URL (the protocol requires one; some "
+                     "crawlers ignore it)", url, ", ".join(relative[:3]))
+            sitemaps = [urllib.parse.urljoin(url, s) for s in sitemaps]
         info["sitemaps"] = sitemaps
         star = groups.get("*", [])
         gbot = groups.get("googlebot", star)
@@ -774,12 +846,80 @@ class Audit:
         if onclick_nav:
             self.add("warning", "25", f"{onclick_nav} elements navigate via onclick instead of <a href> (not crawlable)", url)
 
+        # ---- raw HTML vs rendered DOM (optional)
+        if self.renderer is not None:
+            self.check_render(url, final, p)
+
         # ---- performance / headers (start page only)
         if deep_checks:
             self.check_headers(url, r)
         if r.elapsed > 1.8:
             self.add("warning", "6, 10, 11", f"Slow response: {int(r.elapsed*1000)} ms (TTFB + download from this machine)", url)
         return pr
+
+    def check_render(self, url: str, final: str, p_raw: "PageParser"):
+        """Compare what a non-rendering crawler sees with what a rendering one sees (practices 25, 127; A8)."""
+        try:
+            rendered_html, rendered_url = self.renderer.render(final)
+        except Exception as e:
+            self.add("info", "127", "Could not render the page in headless Chromium", url, f"{type(e).__name__}: {e}")
+            return
+        p_r = PageParser()
+        try:
+            p_r.feed(rendered_html)
+        except Exception:
+            pass
+        raw, ren = page_signals(p_raw, final), page_signals(p_r, rendered_url or final)
+        pr = self.pages.get(url)
+        diff = {}
+        if norm(rendered_url or final) != norm(final):
+            self.add("warning", "25, 127", "JavaScript changes the URL after load (client-side redirect): crawlers that don't "
+                     "render stay on the original URL", url, f"{final} → {rendered_url}")
+        if raw["noindex"] != ren["noindex"]:
+            if raw["noindex"]:
+                self.add("critical", "4, 127", "Served HTML has noindex but JavaScript removes it: Google may skip rendering a "
+                         "noindex page, so it stays out of the index", url)
+            else:
+                self.add("critical", "4, 127", "JavaScript adds noindex after load: the page can drop out of Google once rendered", url)
+            diff["noindex"] = [raw["noindex"], ren["noindex"]]
+        if raw["canonical"] != ren["canonical"]:
+            sev = "critical" if raw["canonical"] and ren["canonical"] else "warning"
+            self.add(sev, "18, 127", "Canonical differs between served HTML and rendered DOM: conflicting signals; set it "
+                     "server-side only", url, f"served: {raw['canonical'] or '—'} · rendered: {ren['canonical'] or '—'}")
+            diff["canonical"] = [raw["canonical"], ren["canonical"]]
+        if raw["title"] != ren["title"]:
+            sev = "warning" if not raw["title"] else "info"
+            self.add(sev, "56, 127", "Title is set or changed by JavaScript: non-rendering crawlers and AI agents see the "
+                     "served one", url, f"served: {raw['title'][:80] or '—'} · rendered: {ren['title'][:80] or '—'}")
+            diff["title"] = [raw["title"], ren["title"]]
+        if raw["description"] != ren["description"] and not raw["description"]:
+            self.add("info", "56, 127", "Meta description only exists after JavaScript", url, ren["description"][:120])
+            diff["description"] = [raw["description"], ren["description"]]
+        if ren["h1"] and not raw["h1"]:
+            self.add("warning", "43, 127", "The H1 only exists after JavaScript", url, ren["h1"][0][:100])
+            diff["h1"] = [raw["h1"], ren["h1"]]
+        if ren["words"] >= 150 and ren["words"] > 2 * max(raw["words"], 1):
+            share = 1 - raw["words"] / ren["words"]
+            self.add("critical" if share > 0.7 else "warning", "25, 127, A8",
+                     f"{share:.0%} of the visible text needs JavaScript ({raw['words']} words served vs {ren['words']} rendered): "
+                     "most AI crawlers and some search engines won't see it", url)
+            diff["words"] = [raw["words"], ren["words"]]
+        only_js = ren["links"] - raw["links"]
+        if len(only_js) >= 5 and len(only_js) > 0.3 * max(len(ren["links"]), 1):
+            self.add("warning", "25, 82, 127", f"{len(only_js)} internal links only appear after JavaScript (of "
+                     f"{len(ren['links'])}): crawlers that don't render can't discover those pages", url,
+                     ", ".join(sorted(only_js)[:3]))
+            diff["links_only_after_js"] = len(only_js)
+        js_types = sorted(set(ren["jsonld"]) - set(raw["jsonld"]))
+        if js_types:
+            self.add("info", "59, 127", "Structured data injected by JavaScript: Google can read it after rendering, many "
+                     "other consumers can't; prefer server-side JSON-LD", url, ", ".join(js_types))
+            diff["jsonld_only_after_js"] = js_types
+        summary = {"served_words": raw["words"], "rendered_words": ren["words"], "served_links": len(raw["links"]),
+                   "rendered_links": len(ren["links"]), "differences": diff}
+        if pr is not None:
+            pr.rendered = summary
+        self.site.setdefault("render", {})[url] = summary
 
     def check_entities(self, url: str, blocks: list, p: "PageParser"):
         """LocalBusiness and Product checks (verticals/local.md L15, verticals/ecommerce.md E7-E16)."""
@@ -1209,9 +1349,105 @@ def render_markdown(audit: Audit, start: str) -> str:
         h1 = (p.h1[0][:40] if p.h1 else "—").replace("|", "/")
         lines.append(f"| {p.url} | {p.status} | {p.depth} | {p.elapsed_ms} | {p.words} | {t.replace('|', '/')} | {h1} | "
                      f"{'yes' if p.noindex else ''} | {', '.join(sorted(set(p.jsonld_types)))[:60]} |")
-    lines += ["", "---", "Limitations: does not execute JavaScript (it measures what a non-rendering crawler sees), does not "
-              "measure field Core Web Vitals (use PageSpeed Insights / Search Console), and latency depends on where it runs."]
+    rd = audit.site.get("render")
+    if rd:
+        lines += ["## Served HTML vs rendered DOM", "", "| URL | Words served → rendered | Internal links served → rendered | Differences |",
+                  "|---|---|---|---|"]
+        for u, s in rd.items():
+            d = ", ".join(s["differences"]) or "none"
+            lines.append(f"| {u} | {s['served_words']} → {s['rendered_words']} | {s['served_links']} → {s['rendered_links']} | {d} |")
+        lines += ["", "_Rendered in headless Chromium with a mobile viewport. What only exists after JavaScript is invisible to "
+                  "crawlers that don't render (most AI agents) and delayed for Google (practices 25, 127)._", ""]
+    js_note = ("JavaScript was rendered for comparison (--render)" if rd else
+               "does not execute JavaScript unless --render is used (it measures what a non-rendering crawler sees)")
+    lines += ["", "---", f"Limitations: {js_note}, does not measure field Core Web Vitals (use `search_data.py crux`/`psi`, "
+              "PageSpeed Insights or Search Console), and latency depends on where it runs."]
     return "\n".join(lines) + "\n"
+
+
+def render_html(audit: Audit, start: str) -> str:
+    """Self-contained HTML report (no external assets) for sharing with a client or team."""
+    e = htmllib.escape
+    f = sorted(audit.findings, key=lambda x: (SEVERITY_ORDER[x.severity], _first_num(x.practices)))
+    counts = Counter(x.severity for x in f)
+    by_msg = Counter((x.severity, x.message) for x in f)
+    top = sorted(((s, m, n) for (s, m), n in by_msg.items() if s != "info"),
+                 key=lambda x: (SEVERITY_ORDER[x[0]], -x[2]))[:8]
+    out = ["<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>",
+           f"<title>SEO audit — {e(start)}</title><style>",
+           ":root{--bg:#fff;--fg:#16181d;--mut:#5b616e;--line:#e3e5ea;--card:#f6f7f9;--crit:#c62828;--warn:#b26a00;--info:#1f5fbf}",
+           "@media (prefers-color-scheme:dark){:root{--bg:#121417;--fg:#e8eaee;--mut:#9aa1ad;--line:#2a2e35;--card:#1a1d22;--crit:#ff6b6b;--warn:#f0a845;--info:#6aa4ff}}",
+           "*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg)}",
+           "main{max-width:1180px;margin:0 auto;padding:32px 16px 64px}h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:36px 0 12px}",
+           ".mut{color:var(--mut)}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:20px 0}",
+           ".card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}.card b{display:block;font-size:28px;font-variant-numeric:tabular-nums}",
+           ".critical{color:var(--crit)}.warning{color:var(--warn)}.info{color:var(--info)}",
+           ".wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}table{border-collapse:collapse;width:100%;font-size:13.5px}",
+           "th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{background:var(--card);position:sticky;top:0}",
+           "td.u,td.ev{word-break:break-all;max-width:340px}tr:last-child td{border-bottom:0}",
+           "input{width:100%;max-width:420px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit}",
+           "ol li{margin:4px 0}footer{margin-top:40px;font-size:13px}</style></head><body><main>",
+           f"<h1>SEO audit</h1><div class=mut>{e(start)} · {time.strftime('%Y-%m-%d %H:%M')} · pages analysed: {len(audit.pages)}</div>",
+           "<div class=cards>"]
+    for s in ("critical", "warning", "info"):
+        out.append(f"<div class=card><span class='{s}'>{e(SEV_LABEL[s].split(' ', 1)[1])}</span><b>{counts.get(s, 0)}</b></div>")
+    out.append("</div>")
+    if top:
+        out.append("<h2>Fix first</h2><ol>")
+        out += [f"<li><span class='{s}'>●</span> {e(m)} <span class=mut>({n} {'page' if n == 1 else 'pages'})</span></li>"
+                for s, m, n in top]
+        out.append("</ol>")
+    out.append("<h2>All findings</h2><p><input id=q type=search placeholder='Filter findings…' aria-label='Filter findings'></p>"
+               "<div class=wrap><table id=ft><thead><tr><th>Severity</th><th>Practice</th><th>Finding</th><th>URL</th><th>Evidence</th></tr></thead><tbody>")
+    for x in f:
+        out.append(f"<tr><td class='{x.severity}'>{e(x.severity)}</td><td>{e(x.practices)}</td><td>{e(x.message)}</td>"
+                   f"<td class=u>{e(x.url)}</td><td class=ev>{e(x.evidence)}</td></tr>")
+    out.append("</tbody></table></div>")
+    rd = audit.site.get("render")
+    if rd:
+        out.append("<h2>Served HTML vs rendered DOM</h2><div class=wrap><table><thead><tr><th>URL</th><th>Words</th><th>Internal links</th>"
+                   "<th>Differences</th></tr></thead><tbody>")
+        for u, s in rd.items():
+            out.append(f"<tr><td class=u>{e(u)}</td><td>{s['served_words']} → {s['rendered_words']}</td>"
+                       f"<td>{s['served_links']} → {s['rendered_links']}</td><td>{e(', '.join(s['differences']) or 'none')}</td></tr>")
+        out.append("</tbody></table></div>")
+    rb = audit.site.get("robots", {})
+    if rb.get("bots"):
+        out.append("<h2>Crawlers (per robots.txt)</h2><div class=wrap><table><thead><tr><th>User agent</th><th>Purpose</th><th>Status</th></tr></thead><tbody>")
+        out += [f"<tr><td>{e(k)}</td><td>{e(BOT_PURPOSE.get(k, ''))}</td><td>{e(str(v))}</td></tr>" for k, v in rb["bots"].items()]
+        out.append("</tbody></table></div>")
+    out.append("<h2>Pages</h2><div class=wrap><table><thead><tr><th>URL</th><th>Status</th><th>Depth</th><th>ms</th><th>Words</th>"
+               "<th>Title</th><th>noindex</th></tr></thead><tbody>")
+    for pg in sorted(audit.pages.values(), key=lambda x: (x.depth, x.url)):
+        out.append(f"<tr><td class=u>{e(pg.url)}</td><td>{e(str(pg.status))}</td><td>{pg.depth}</td><td>{pg.elapsed_ms}</td>"
+                   f"<td>{pg.words}</td><td>{e(pg.title[:90])}</td><td>{'yes' if pg.noindex else ''}</td></tr>")
+    out.append("</tbody></table></div>")
+    out.append("<footer class=mut>Practice numbers refer to the seo-pro references. Findings are prompts for review, not "
+               "ranking predictions. Generated by seo_audit.py " + e(__version__) + ".</footer></main>"
+               "<script>const q=document.getElementById('q'),rows=[...document.querySelectorAll('#ft tbody tr')];"
+               "q.addEventListener('input',()=>{const v=q.value.toLowerCase();rows.forEach(r=>{r.hidden=v&&!r.textContent.toLowerCase().includes(v)})});"
+               "</script></body></html>")
+    return "\n".join(out)
+
+
+def write_outputs(audit: Audit, start: str, args, include_pages: bool = True):
+    report = render_markdown(audit, start)
+    if args.output:
+        with open(args.output, "w", encoding="utf-8") as fh:
+            fh.write(report)
+        print(f"Report written to {args.output}")
+    elif not args.html:
+        print(report)
+    if args.html:
+        with open(args.html, "w", encoding="utf-8") as fh:
+            fh.write(render_html(audit, start))
+        print(f"HTML report written to {args.html}")
+    if args.json:
+        data = {"start": start, "version": __version__, "site": audit.site, "findings": [asdict(x) for x in audit.findings]}
+        if include_pages:
+            data["pages"] = [asdict(p) for p in audit.pages.values()]
+        with open(args.json, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, ensure_ascii=False, indent=2, default=lambda o: sorted(o) if isinstance(o, set) else str(o))
 
 # ---------------------------------------------------------------------------------------- main
 
@@ -1226,6 +1462,10 @@ def main(argv=None) -> int:
     ap.add_argument("--urls", help="File with one URL per line to audit without crawling (alert mode)")
     ap.add_argument("--output", help="Write the Markdown report to this path")
     ap.add_argument("--json", help="Write findings as JSON to this path")
+    ap.add_argument("--html", help="Write a self-contained HTML report to this path (for clients or the team)")
+    ap.add_argument("--render", action="store_true", help="Also render each page in headless Chromium and compare served "
+                                                          "HTML with the rendered DOM (needs Playwright)")
+    ap.add_argument("--render-wait", type=int, default=1500, help="Extra milliseconds to wait after load when rendering")
     ap.add_argument("--fail-on", choices=["critical", "warning", "none"], default="none",
                     help="Exit with code 1 if there are findings at this level or above")
     ap.add_argument("--user-agent", default=UA_DEFAULT)
@@ -1246,21 +1486,21 @@ def main(argv=None) -> int:
     if args.redirect_map and not args.url and not args.urls:
         audit.check_redirect_map(args.redirect_map)
         start = args.redirect_map
-        report = render_markdown(audit, start)
-        if args.output:
-            with open(args.output, "w", encoding="utf-8") as fh:
-                fh.write(report)
-            print(f"Report written to {args.output}")
-        else:
-            print(report)
-        if args.json:
-            with open(args.json, "w", encoding="utf-8") as fh:
-                json.dump({"start": start, "site": audit.site, "findings": [asdict(x) for x in audit.findings]},
-                          fh, ensure_ascii=False, indent=2, default=str)
+        write_outputs(audit, start, args, include_pages=False)
         if args.fail_on == "none":
             return 0
         return 1 if any(SEVERITY_ORDER[x.severity] <= SEVERITY_ORDER[args.fail_on] for x in audit.findings) else 0
 
+    if args.render:
+        audit.renderer = Renderer(args.user_agent, args.timeout, args.render_wait)
+    try:
+        return _run_site(audit, args)
+    finally:
+        if audit.renderer is not None:
+            audit.renderer.close()
+
+
+def _run_site(audit: Audit, args) -> int:
     if args.urls:
         with open(args.urls, encoding="utf-8-sig") as fh:
             urls = [l.strip() for l in fh if l.strip() and not l.startswith("#")]
@@ -1271,7 +1511,7 @@ def main(argv=None) -> int:
         start = args.url if re.match(r"https?://", args.url) else "https://" + args.url
         first = audit.audit_page(start, 0, deep_checks=True)
         if first is None or isinstance(first.status, str):
-            print(render_markdown(audit, start))
+            write_outputs(audit, start, args)
             return 2
         base = first.final_url
         if not args.skip_variants:
@@ -1285,17 +1525,7 @@ def main(argv=None) -> int:
         if args.crawl > 1:
             audit.crawl(start, args.crawl, sm_urls)
 
-    report = render_markdown(audit, start)
-    if args.output:
-        with open(args.output, "w", encoding="utf-8") as fh:
-            fh.write(report)
-        print(f"Report written to {args.output}")
-    else:
-        print(report)
-    if args.json:
-        with open(args.json, "w", encoding="utf-8") as fh:
-            json.dump({"start": start, "site": audit.site, "findings": [asdict(x) for x in audit.findings],
-                       "pages": [asdict(p) for p in audit.pages.values()]}, fh, ensure_ascii=False, indent=2, default=str)
+    write_outputs(audit, start, args)
     if args.fail_on == "none":
         return 0
     level = SEVERITY_ORDER[args.fail_on]

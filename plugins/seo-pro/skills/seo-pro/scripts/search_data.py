@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-search_data.py — pull and compare search data from Google Search Console and Bing Webmaster Tools.
+search_data.py — pull and compare search data from Google Search Console and Bing Webmaster Tools,
+and field Core Web Vitals from PageSpeed Insights and the Chrome UX Report (CrUX).
 Python 3.9+ standard library only. Part of the seo-pro skill by blackwings.dev — MIT License.
 
 Authentication (never paste secrets into chat or commit them):
@@ -9,6 +10,8 @@ Authentication (never paste secrets into chat or commit them):
                    --scopes=https://www.googleapis.com/auth/webmasters.readonly,https://www.googleapis.com/auth/cloud-platform
                  export GSC_ACCESS_TOKEN="$(gcloud auth application-default print-access-token)"   # valid ~1 hour
   Bing    — an API key from Bing Webmaster Tools (Settings → API Access → API Key) in BING_API_KEY.
+  CrUX    — a Google Cloud API key with the Chrome UX Report API enabled in CRUX_API_KEY (required).
+  PSI     — optional PSI_API_KEY (PageSpeed Insights works without a key at a low shared quota).
 
 Usage:
   python3 search_data.py gsc-sites
@@ -19,9 +22,15 @@ Usage:
   python3 search_data.py bing --method GetPageStats --site https://example.com/ --out bing-pages.csv
   python3 search_data.py compare --before before.csv --after after.csv --key page --out delta.csv
   python3 search_data.py brand-split --input gsc.csv --brand-regex "(?i)acme ?tools|acmetools"
+  python3 search_data.py crux --origin https://example.com --form-factor PHONE
+  python3 search_data.py crux --urls templates.txt --form-factor PHONE --fallback-origin --out crux.csv
+  python3 search_data.py crux --url https://example.com/product/x --history --out crux-history.csv
+  python3 search_data.py psi --urls templates.txt --strategy mobile --out psi.csv
 
 Data limits worth stating in any report: Search Console hides anonymised queries, returns top rows only and uses
 Pacific Time; Bing query/page stats are weekly buckets. Clicks are not sessions (playbooks/measurement.md X5).
+CrUX is a 28-day rolling p75 of real Chrome users, only for pages and origins with enough traffic; PSI lab scores are one
+simulated load and are not what Google uses (practice 6).
 """
 from __future__ import annotations
 
@@ -39,7 +48,7 @@ import urllib.request
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
-__version__ = "1.0.1"
+__version__ = "1.1.0"
 
 GSC_BASE = os.environ.get("GSC_API_BASE", "https://www.googleapis.com/webmasters/v3")
 GSC_INSPECT = os.environ.get("GSC_INSPECT_URL", "https://searchconsole.googleapis.com/v1/urlInspection/index:inspect")
@@ -47,6 +56,13 @@ BING_BASE = os.environ.get("BING_API_BASE", "https://ssl.bing.com/webmaster/api.
 GSC_TYPES = ("web", "image", "video", "news", "googleNews", "discover")
 GSC_DIMS = ("query", "page", "country", "device", "searchAppearance", "date", "hour")
 BING_METHODS = ("GetQueryStats", "GetPageStats", "GetRankAndTrafficStats", "GetCrawlStats", "GetUrlSubmissionQuota")
+CRUX_BASE = os.environ.get("CRUX_API_BASE", "https://chromeuxreport.googleapis.com/v1")
+PSI_BASE = os.environ.get("PSI_API_BASE", "https://www.googleapis.com/pagespeedonline/v5/runPagespeed")
+# Core Web Vitals thresholds at p75 (good ≤ first, poor > second). CLS is unitless.
+CWV = {"largest_contentful_paint": ("LCP_ms", 2500, 4000), "interaction_to_next_paint": ("INP_ms", 200, 500),
+       "cumulative_layout_shift": ("CLS", 0.1, 0.25), "first_contentful_paint": ("FCP_ms", 1800, 3000),
+       "experimental_time_to_first_byte": ("TTFB_ms", 800, 1800)}
+CORE = ("largest_contentful_paint", "interaction_to_next_paint", "cumulative_layout_shift")
 
 
 class ApiError(RuntimeError):
@@ -226,6 +242,167 @@ def bing(args):
     _write_csv(rows, args.out)
 
 
+# ------------------------------------------------------------------------------------ Core Web Vitals
+
+def _rating(metric: str, v) -> str:
+    if v is None or v == "":
+        return ""
+    _, good, poor = CWV[metric]
+    v = float(v)
+    return "good" if v <= good else ("poor" if v > poor else "needs improvement")
+
+
+def _targets(args) -> list[tuple[str, str]]:
+    out = []
+    if getattr(args, "origin", None):
+        out.append(("origin", args.origin.rstrip("/")))
+    if getattr(args, "url", None):
+        out.append(("url", args.url))
+    if getattr(args, "urls", None):
+        with open(args.urls, encoding="utf-8-sig") as fh:
+            out += [("url", l.strip()) for l in fh if l.strip() and not l.startswith("#")]
+    if not out:
+        raise ApiError("Give --origin, --url or --urls.")
+    return out
+
+
+def _origin_of(url: str) -> str:
+    sp = urllib.parse.urlsplit(url)
+    return f"{sp.scheme}://{sp.netloc}"
+
+
+def _crux_query(endpoint: str, scope: str, target: str, form_factor: str, extra: dict | None = None) -> dict | None:
+    key = os.environ.get("CRUX_API_KEY")
+    if not key:
+        raise ApiError("Set CRUX_API_KEY to a Google Cloud API key with the Chrome UX Report API enabled.")
+    body = {scope: target, "metrics": list(CWV)}
+    if form_factor != "ALL":
+        body["formFactor"] = form_factor
+    body.update(extra or {})
+    try:
+        return _request(f"{CRUX_BASE}/records:{endpoint}?key={urllib.parse.quote(key)}", "POST", body)
+    except ApiError as e:
+        if "HTTP 404" in str(e):  # not enough Chrome users for this page/origin and form factor
+            return None
+        raise
+
+
+def _period(p: dict) -> str:
+    def d(x):
+        return f"{x.get('year')}-{x.get('month'):02d}-{x.get('day'):02d}" if x else ""
+    return f"{d(p.get('firstDate'))}..{d(p.get('lastDate'))}"
+
+
+def crux(args):
+    """Field Core Web Vitals (p75 of real Chrome users, 28-day rolling) per URL or origin."""
+    rows = []
+    for scope, target in _targets(args):
+        if args.history:
+            data = _crux_query("queryHistoryRecord", scope, target, args.form_factor,
+                               {"collectionPeriodCount": args.periods})
+            if not data:
+                rows.append({"target": target, "scope": scope, "form_factor": args.form_factor, "note": "no CrUX data"})
+                continue
+            rec = data.get("record", {})
+            periods = rec.get("collectionPeriods", [])
+            for i, p in enumerate(periods):
+                row = {"target": target, "scope": scope, "form_factor": args.form_factor, "period": _period(p)}
+                for m, (col, _, _) in CWV.items():
+                    series = rec.get("metrics", {}).get(m, {}).get("percentilesTimeseries", {}).get("p75s", [])
+                    v = series[i] if i < len(series) else None
+                    row[col] = v if v is not None else ""
+                    row[col + "_rating"] = _rating(m, v)
+                rows.append(row)
+            continue
+        data = _crux_query("queryRecord", scope, target, args.form_factor)
+        used_scope, used_target = scope, target
+        if not data and scope == "url" and args.fallback_origin:
+            used_scope, used_target = "origin", _origin_of(target)
+            data = _crux_query("queryRecord", used_scope, used_target, args.form_factor)
+        if not data:
+            rows.append({"target": target, "scope": scope, "form_factor": args.form_factor,
+                         "note": "no CrUX data (not enough Chrome traffic)"})
+            continue
+        rec = data.get("record", {})
+        row = {"target": target, "scope": used_scope + (" (fallback)" if used_scope != scope else ""),
+               "form_factor": args.form_factor, "period": _period(rec.get("collectionPeriod", {}))}
+        passes = True
+        for m, (col, _, _) in CWV.items():
+            met = rec.get("metrics", {}).get(m)
+            v = met.get("percentiles", {}).get("p75") if met else None
+            row[col] = v if v is not None else ""
+            row[col + "_rating"] = _rating(m, v)
+            if m in CORE and row[col + "_rating"] != "good":
+                passes = False
+            if met and met.get("histogram"):
+                row[col + "_good_share"] = round(float(met["histogram"][0].get("density", 0) or 0), 4)
+        row["core_web_vitals"] = "pass" if passes else "fail"
+        rows.append(row)
+        time.sleep(args.pause)  # CrUX quota: 150 queries/minute per project
+    cols = ["target", "scope", "form_factor", "period"]
+    for col, _, _ in CWV.values():
+        cols += [col, col + "_rating"] + ([] if args.history else [col + "_good_share"])
+    cols += ([] if args.history else ["core_web_vitals"]) + ["note"]
+    print("CrUX = p75 of real Chrome users over 28 days; pages without enough traffic have no data. "
+          "A pass needs LCP, INP and CLS all good (practice 6).", file=sys.stderr)
+    _write_csv(rows, args.out, cols)
+
+
+PSI_FIELD = {"LARGEST_CONTENTFUL_PAINT_MS": ("LCP_ms", 1), "INTERACTION_TO_NEXT_PAINT": ("INP_ms", 1),
+             "CUMULATIVE_LAYOUT_SHIFT_SCORE": ("CLS", 100), "FIRST_CONTENTFUL_PAINT_MS": ("FCP_ms", 1),
+             "EXPERIMENTAL_TIME_TO_FIRST_BYTE": ("TTFB_ms", 1)}
+PSI_CAT = {"FAST": "good", "AVERAGE": "needs improvement", "SLOW": "poor"}
+
+
+def psi(args):
+    """PageSpeed Insights: field data (CrUX, page or origin) plus one Lighthouse lab run per URL and strategy."""
+    key = os.environ.get("PSI_API_KEY")
+    strategies = ["mobile", "desktop"] if args.strategy == "both" else [args.strategy]
+    rows = []
+    for scope, target in _targets(args):
+        if scope == "origin":
+            target = target + "/"
+        for strat in strategies:
+            qs = [("url", target), ("strategy", strat), ("category", "performance")]
+            if key:
+                qs.append(("key", key))
+            try:
+                data = _request(f"{PSI_BASE}?{urllib.parse.urlencode(qs)}")
+            except ApiError as e:
+                rows.append({"url": target, "strategy": strat, "note": str(e)[:200]})
+                continue
+            row = {"url": target, "strategy": strat}
+            le = data.get("loadingExperience") or {}
+            src = "page"
+            if not le.get("metrics"):
+                le, src = data.get("originLoadingExperience") or {}, "origin"
+            row["field_scope"] = src if le.get("metrics") else "none"
+            for k, (col, div) in PSI_FIELD.items():
+                met = (le.get("metrics") or {}).get(k)
+                if met:
+                    v = met.get("percentile")
+                    row[col] = round(v / div, 3) if div != 1 else v
+                    row[col + "_rating"] = PSI_CAT.get(met.get("category"), met.get("category", ""))
+            row["field_overall"] = PSI_CAT.get(le.get("overall_category", ""), le.get("overall_category", ""))
+            lh = data.get("lighthouseResult") or {}
+            perf = (lh.get("categories") or {}).get("performance", {}).get("score")
+            row["lab_performance_score"] = round(perf * 100) if isinstance(perf, (int, float)) else ""
+            audits = lh.get("audits") or {}
+            for aid, col in (("largest-contentful-paint", "lab_LCP_ms"), ("cumulative-layout-shift", "lab_CLS"),
+                             ("total-blocking-time", "lab_TBT_ms")):
+                nv = (audits.get(aid) or {}).get("numericValue")
+                row[col] = round(nv, 3) if isinstance(nv, (int, float)) else ""
+            rows.append(row)
+            time.sleep(args.pause)
+    cols = ["url", "strategy", "field_scope"]
+    for col, _ in PSI_FIELD.values():
+        cols += [col, col + "_rating"]
+    cols += ["field_overall", "lab_performance_score", "lab_LCP_ms", "lab_CLS", "lab_TBT_ms", "note"]
+    print("Field data (real users) decides Core Web Vitals; the lab score is one simulated load for debugging only.",
+          file=sys.stderr)
+    _write_csv(rows, args.out, cols)
+
+
 # ------------------------------------------------------------------------------------------ Analysis
 
 def _load(path: str) -> list[dict]:
@@ -325,6 +502,17 @@ def main(argv=None) -> int:
     s = sub.add_parser("brand-split")
     s.add_argument("--input", required=True); s.add_argument("--brand-regex", required=True)
     s.add_argument("--out"); s.set_defaults(fn=brand_split)
+    s = sub.add_parser("crux", help="Field Core Web Vitals from the Chrome UX Report API (CRUX_API_KEY)")
+    s.add_argument("--origin"); s.add_argument("--url"); s.add_argument("--urls", help="File with one URL per line")
+    s.add_argument("--form-factor", default="PHONE", choices=["PHONE", "DESKTOP", "TABLET", "ALL"])
+    s.add_argument("--fallback-origin", action="store_true", help="Use origin data when a URL has none")
+    s.add_argument("--history", action="store_true", help="Weekly p75 time series (CrUX History API)")
+    s.add_argument("--periods", type=int, default=25, help="History periods, 1-40 (default 25)")
+    s.add_argument("--pause", type=float, default=0.5); s.add_argument("--out"); s.set_defaults(fn=crux)
+    s = sub.add_parser("psi", help="PageSpeed Insights field + lab data (optional PSI_API_KEY)")
+    s.add_argument("--origin"); s.add_argument("--url"); s.add_argument("--urls", help="File with one URL per line")
+    s.add_argument("--strategy", default="mobile", choices=["mobile", "desktop", "both"])
+    s.add_argument("--pause", type=float, default=1.0); s.add_argument("--out"); s.set_defaults(fn=psi)
 
     args = ap.parse_args(argv)
     try:
