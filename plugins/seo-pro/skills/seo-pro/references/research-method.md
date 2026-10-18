@@ -78,12 +78,12 @@ This is a curated reading map, not 20 independent confirmations. Several sources
 | [Ahrefs blog](https://ahrefs.com/blog/) | Link, keyword, and content research using Ahrefs data | Vendor dataset and definitions; commercial product context |
 | [Moz blog](https://moz.com/blog) | SEO education and tool-based studies | Verify older advice and methodology before applying it |
 | [Semrush blog](https://www.semrush.com/blog/) | Competitive research and market datasets | Vendor data, sampling, and product definitions matter |
-| [Onely](https://onely.com/blog/) | Technical SEO and rendering research | Specialist analysis; validate findings on the target stack |
+| [Onely](https://www.onely.com/blog/) | Technical SEO and rendering research | Specialist analysis; validate findings on the target stack |
 | [Marie Haynes](https://www.mariehaynes.com/blog/) | Quality systems and update analysis | Expert interpretation, not inside knowledge of algorithm weights |
 | [Aleyda Solis](https://www.aleydasolis.com/en/blog/) | International, technical SEO and practical frameworks | Practitioner experience; adapt advice to the site's data |
 | [Lily Ray](https://lilyray.nyc/) | Quality, trust, and update analysis, especially YMYL | Case analysis and interpretation; distinguish from official policy |
 | [Glenn Gabe](https://www.gsqi.com/marketing-blog/) | Technical diagnostics and observed update patterns | Case observations are not controlled causal evidence |
-| [Cyrus Shepard](https://zyppy.com/seo-blog/) | On-page and ranking experiments | Check study design, sample, and date for each claim |
+| [Cyrus Shepard](https://zyppy.com/) | On-page and ranking experiments | Check study design, sample, and date for each claim |
 | [Kevin Indig](https://www.kevin-indig.com/) | Growth strategy, market analysis, and SEO experiments | Strategic interpretation; claims vary in evidence type |
 | [Eli Schwartz](https://www.elischwartz.co/) | Product-led SEO and international growth strategy | Business framework, not a confirmed platform ranking signal |
 
