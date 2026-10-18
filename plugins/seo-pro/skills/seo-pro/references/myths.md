@@ -36,6 +36,8 @@ Severity: 🔴 can cause harm (penalty, legal exposure, traffic loss) · 🟠 fa
 | "Disavow toxic links regularly" | Google ignores most junk; mass disavows can remove helpful links | Only after a manual action or a known link purchase | 153 | 🔴 |
 | "Rank in 30/60/90 days" | Ranking for competitive queries takes months | Phases are an order of work, not a calendar | SKILL.md | 🟡 |
 
+Engine-specific myths live in each engine layer (e.g. `engines/bing.md` → "Bing-specific myths").
+
 ## Other claims users often raise
 
 - **"You need to publish X articles a month"**: quality and coverage of demand matter, not frequency.

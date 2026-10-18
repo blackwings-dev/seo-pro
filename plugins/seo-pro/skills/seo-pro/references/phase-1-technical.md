@@ -58,6 +58,7 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 - **Expected result:** indexing in Bing within hours; visibility in the products that depend on its index.
 - **Avoid:** pinging unchanged URLs in a loop (ignored, and wastes quota).
 - **Verify:** 200/202 response from the API; IndexNow report in Bing Webmaster Tools.
+- **Bing layer:** verification options, streamed submissions, Copilot directives and AI Performance are in `engines/bing.md` (B1–B9).
 
 ---
 
@@ -304,6 +305,7 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 - **Expected result:** an explicit, documented decision — not an accidental block inherited from the CDN (some block "AI bots" by default).
 - **Avoid:** showing AI crawlers different content from what users see: that is *cloaking*, and since May 2026 Google treats it as spam in its AI features too.
 - **Verify:** the auditor lists which AI agents robots.txt allows or blocks; review the CDN's bot settings.
+- **Bing layer:** in Bing, `noarchive` removes content from Copilot answers and `nocache` limits citations to URL, title and snippet — see `engines/bing.md` B8.
 
 ### 38. Core entity structured data — High
 - **Why:** helps Google and AIs identify who is behind the site (name, logo, profiles, contact) and display the site name and logo correctly.
