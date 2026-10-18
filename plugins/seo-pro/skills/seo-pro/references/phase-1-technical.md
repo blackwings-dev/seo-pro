@@ -72,7 +72,7 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
   - CLS: see 14.
 - **Expected result:** the Search Console "Core Web Vitals" report green on mobile and desktop.
 - **Avoid:** optimising only the Lighthouse lab score while ignoring field data; chasing 100/100 while bigger problems remain.
-- **Verify:** PageSpeed Insights (real-user section), Search Console, `npx lighthouse`. Field data takes ~28 days to reflect improvements.
+- **Verify:** PageSpeed Insights (real-user section), Search Console, `npx lighthouse`. Field data takes ~28 days to reflect improvements. In bulk: `scripts/search_data.py crux --urls templates.txt --fallback-origin` (p75 per URL with pass/fail; needs a CrUX API key) and `crux --history` for the weekly trend after a release; `psi` adds one lab run per URL for debugging.
 
 ### 7. Mobile-first — Critical
 - **Why:** Google indexes every site with its smartphone crawler. Whatever isn't on the mobile version doesn't exist for Google.
@@ -209,7 +209,7 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 - **How:** server-side or static rendering for every indexable page (see 127). Links as `<a href="/path">`, never `div`s or `onClick` with `router.push` as the only mechanism. Title, meta, canonical and JSON-LD in the served HTML.
 - **Expected result:** `curl -s URL` contains the main content, the H1, navigation links and metadata.
 - **Avoid:** SPAs that return an empty `<div id="root"></div>`; main content fetched client-side.
-- **Verify:** the auditor measures words of text in the un-rendered HTML and warns when very low; URL Inspection → "View crawled page".
+- **Verify:** the auditor measures words of text in the un-rendered HTML and warns when very low; `seo_audit.py --render` compares served HTML with the rendered DOM page by page (text, links, title, canonical, robots, H1, JSON-LD that only exist after JavaScript); URL Inspection → "View crawled page".
 
 ### 26. Manage low-value pages — High
 - **Why:** thousands of thin pages (internal search results, tags with one post, empty profiles, filters with no results) dilute the site's perceived quality and waste crawling.

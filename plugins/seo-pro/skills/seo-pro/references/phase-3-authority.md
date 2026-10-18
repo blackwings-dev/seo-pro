@@ -184,6 +184,7 @@ E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) is a quality
 ### 124. Server log analysis — Medium (High on large sites)
 - **How:** analyse Googlebot hits: which sections it crawls, how often, which status codes it gets, which useless URLs consume crawling. **Verify it's the real Googlebot** (reverse DNS ending in `googlebot.com`/`google.com` plus forward confirmation, or Google's published IP ranges) — many bots impersonate it. On Vercel/Cloudflare use log drains/Logpush.
 - **Expected result:** discover ignored sections or crawl traps. Most useful on sites with > 10,000 URLs.
+- **Tool:** `scripts/crawl_logs.py access.log* --sitemap-urls urls.txt` — hits per bot verified against published IP ranges (impostors reported apart), status codes, sections, crawl spent on redirects/errors/parameters, daily trend, AI agents, and sitemap URLs Googlebot never fetched. Logs contain IP addresses: analyse them where they live and share only aggregates.
 
 ### 125. 304 responses / conditional requests — Medium
 - **How:** have the server send `ETag` or `Last-Modified` and respond `304 Not Modified` to `If-None-Match`/`If-Modified-Since` when nothing changed. Googlebot uses this and it saves resources on both sides.
@@ -196,6 +197,7 @@ E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) is a quality
 ### 127. Server-side rendering (SSR/SSG) — Critical for JavaScript frameworks
 - **How:** static or incremental generation (SSG/ISR) for content that rarely changes; SSR for content that changes per request; server components (React Server Components) to minimise client JavaScript. See `nextjs.md`.
 - **Expected result:** complete HTML in the first response (25).
+- **Verify:** `seo_audit.py --render` flags pages whose text, links or metadata appear only after JavaScript.
 
 ### 128. Orphaned image clean-up — Low (maintenance, not SEO)
 - **How:** remove unreferenced images from storage to shrink backups and costs. No direct ranking effect.
