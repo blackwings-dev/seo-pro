@@ -113,7 +113,7 @@ All operators above publish IP ranges for verification (OpenAI per-agent JSON fi
 - **How:** allow-rules that match the documented user agent **and** the operator's published IP list, refreshed automatically; never trust the user agent alone (it's trivially spoofed). Review "block AI bots" toggles in Cloudflare and similar (shared 37).
 - **Expected result:** 200 responses to verified search and user agents.
 - **Avoid:** allowing by user agent alone into sensitive areas.
-- **Verify:** WAF event logs; test requests; server logs.
+- **Verify:** WAF event logs; test requests; server logs — `scripts/crawl_logs.py` counts hits per AI agent, checks them against the published IP ranges and lists impostors.
 
 ---
 
