@@ -1,0 +1,10 @@
+{
+  "name": "seo-pro",
+  "version": "1.0.0",
+  "description": "End-to-end SEO for Claude Code: 160 verifiable practices, an automated auditor, Next.js and multi-stack implementation guides, and AI-search (GEO) optimisation",
+  "author": { "name": "blackwings.dev", "url": "https://github.com/blackwings-dev" },
+  "homepage": "https://github.com/blackwings-dev/seo-pro",
+  "repository": "https://github.com/blackwings-dev/seo-pro",
+  "license": "MIT",
+  "keywords": ["seo", "geo", "ai-search", "nextjs", "search-console", "core-web-vitals", "schema", "json-ld"]
+}
