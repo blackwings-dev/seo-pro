@@ -224,4 +224,4 @@ Google (level A): [Site moves with URL changes](https://developers.google.com/se
 
 Microsoft (level A): [Website migration with Bing](https://blogs.bing.com/webmaster/2020/12/Website-Migration-with-Bing/) (check against current BWT docs) · [Bing Webmaster Guidelines](https://www.bing.com/webmasters/help/webmaster-guidelines-30fba23a) · [IndexNow](https://www.bing.com/webmasters/help/indexnow-0z209wby).
 
-Practitioner (level C, subordinate to official docs): [Aleyda Solis — SEO migration checklist](https://www.aleydasolis.com/en/seo/seo-migration-checklist/) · [Screaming Frog — website migration guide](https://www.screamingfrog.co.uk/seo-spider/tutorials/website-migration-guide/).
+Practitioner (level C, subordinate to official docs): [Aleyda Solis — SEO migration checklist](https://www.aleydasolis.com/en/seo/seo-migration-checklist/) · [Screaming Frog — auditing redirects in a migration](https://www.screamingfrog.co.uk/audit-redirects/).
