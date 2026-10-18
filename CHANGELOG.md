@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.2.0 — unreleased
+
+Evidence-led refinement and a new layer for AI answer engines.
+
+- New `engines/ai-search.md` (A1–A18) for Google AI Overviews / AI Mode, ChatGPT Search, Perplexity and Claude: the seven-stage access-to-citation funnel, per-operator search / training / user-fetch decisions with a robots template, Search Console's Search generative AI control (global since 31 Aug 2026), ChatGPT (`OAI-SearchBot`, `noindex`, `utm_source=chatgpt.com`, Atlas ARIA), Perplexity user fetches that ignore robots.txt, Claude agents and IP verification, WAF rules, an evidence table (established / supported / hypothesis / myth), a query panel, an observation log, eight metrics, a test protocol, priorities by site type, a 90-day sequence and sources graded A–E.
+- Engines matrix gains AI controls; AI myths added (`llms.txt`, AI schema, chunking, the "40% GEO" misreading, GPTBot vs OAI-SearchBot, robots.txt as privacy).
+- Practices 37, 61, 69 and 148 link to the AI layer; 69 is now labelled a hypothesis as a citation lever.
+- `seo_audit.py`: crawlers grouped by purpose (search, AI search, training, user fetch), `Perplexity-User` and `Google-Extended` added, warning when AI search agents are blocked.
+- Spanish AI-search study added to `docs/`.
+
+- New `references/research-method.md`: evidence hierarchy, confidence labels (Established / Supported / Hypothesis / Unknown), how to assess a claim, a 20-source register with limitations, and current platform references.
+- Plans now carry a Confidence column and are prioritised by impact × confidence × reach ÷ effort/risk; verified issues are separated from inferred impact.
+- Heuristics (title and description length, one H1, featured-snippet answer length, timelines) are kept as labelled defaults instead of rules.
+- AI-search guidance states clearly that citations and referrals are uncertain outcomes; crawler-specific access is checked per product.
+- Jurisdiction-aware legal guidance for reviews, scarcity and reference prices, with primary sources (EU, UK CMA, US FTC, European Commission).
+- `seo_audit.py` 1.2.0: title length, meta-description length and H1 count are review prompts (info), not defects; clearer FAQPage message.
+- Spanish research synthesis added to `docs/` (not loaded by the skill).
+
 ## 1.1.0 — 2026-10-18
 
 Engine-aware SEO, starting with Bing and Microsoft Copilot.

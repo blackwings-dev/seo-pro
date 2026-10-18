@@ -33,7 +33,9 @@ plugins/seo-pro/skills/seo-pro/
 │   ├── phase-3-authority.md       # 86–160 links, E-E-A-T, analytics, CRO, automation, international, maintenance
 │   ├── engines/
 │   │   ├── README.md              # Target engines, Google ↔ Bing decision matrix, conflict-resolution rule
+│   │   ├── ai-search.md           # A1–A18: AI answer engines — access funnel, per-agent controls, measurement protocol
 │   │   └── bing.md                # B1–B24: Bing Webmaster Tools, IndexNow, Copilot directives, AI Performance, Bing Places
+│   ├── research-method.md         # Evidence hierarchy, confidence labels, 20-source register, platform links
 │   ├── myths.md                   # Popular advice that is false, outdated or dangerous — and what to do instead
 │   ├── nextjs.md                  # Next.js App Router implementation with code
 │   └── other-stacks.md            # Astro, WordPress, SPAs, Nginx, Apache, Cloudflare, Vercel/Netlify
@@ -42,6 +44,14 @@ plugins/seo-pro/skills/seo-pro/
 ```
 
 Each of the **160 practices** follows the same format: **Why → How → Expected result → Avoid → Verify**, with a priority level.
+
+## Evidence and scope
+
+Recommendations are labelled by confidence (*Established*, *Supported*, *Hypothesis*, *Unknown*) using the evidence hierarchy in `research-method.md`: first-party site data and official search-engine documentation first, vendor studies and practitioner analysis as context. Its 20-source register is a reading map, not 20 independent confirmations. The full Spanish research syntheses behind it — [`docs/research-bible-2026-es.md`](docs/research-bible-2026-es.md) (general SEO) and [`docs/ai-search-study-2026-es.md`](docs/ai-search-study-2026-es.md) (AI answer engines) — live outside the skill so they don't load into context.
+
+Rankings, traffic and AI citations are uncertain outcomes, never promises. Heuristics such as title length or one H1 are presented as useful defaults, not ranking rules.
+
+The auditor checks HTML and HTTP signals. It doesn't execute JavaScript, confirm that a page is indexed, measure field Core Web Vitals or predict rankings: its findings are prompts for review.
 
 ## Install
 
@@ -75,6 +85,7 @@ The skill activates automatically when you ask for anything SEO-related — even
 - "Write the service page for web development in Valencia, optimised for Google and for AI answers"
 - "Organic traffic dropped 40% since the 12th"
 - "Why aren't we showing up in Bing or getting cited by Copilot?"
+- "Should we block GPTBot? And how do we know if ChatGPT or Perplexity cite us?"
 
 As a plugin you can also invoke it explicitly with `/seo-pro:seo-pro`.
 
@@ -94,6 +105,7 @@ It checks:
 - **On-page** — title and meta description, H1 and heading hierarchy, `lang`, viewport, hreflang, Open Graph, favicon, JSON-LD validity and types.
 - **Performance and rendering** — images without `alt` or dimensions, lazy-loaded hero images, render-blocking scripts, JavaScript-dependent content, DOM size, compression, ETag/304.
 - **Security headers** — HSTS, CSP, clickjacking protection, `nosniff`, Referrer-Policy.
+- **AI crawlers** — every major search, training and user-fetch agent with its purpose, and a warning when AI search agents are blocked.
 - **Bing & Copilot** — Bingbot blocks, `crawl-delay`, `noarchive`/`nocache`/`nosnippet` and their Copilot effect, 302s Bing treats as too long-lived, Bing Webmaster Tools verification, IndexNow key file (`--indexnow-key`).
 - **Crawl mode** (`--crawl N`) — broken internal links, links to redirects, duplicate titles and descriptions, click depth and orphaned sitemap URLs.
 
