@@ -1,0 +1,12 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Loading…</title><link rel="canonical" href="/spa.html"></head>
+<body><div id="root"></div>
+<script>
+document.title = "Catalogue — every handmade model";
+var c = document.querySelector('link[rel=canonical]'); c.href = "/catalogue";
+var m = document.createElement('meta'); m.name = "description"; m.content = "All our models in one place."; document.head.appendChild(m);
+var ld = document.createElement('script'); ld.type = "application/ld+json"; ld.text = JSON.stringify({"@context":"https://schema.org","@type":"ItemList","name":"Catalogue"}); document.head.appendChild(ld);
+var words = "Every model we make is listed here with its leather, sole and price. ".repeat(30);
+var links = ""; for (var i = 1; i <= 8; i++) links += '<li><a href="/model-' + i + '.html">Model ' + i + '</a></li>';
+document.getElementById('root').innerHTML = "<main><h1>Catalogue</h1><p>" + words + "</p><ul>" + links + "</ul></main>";
+</script></body></html>
