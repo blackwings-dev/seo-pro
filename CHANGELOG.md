@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.3.1 — 2026-10-18
+
+Fixes from real-world testing (Windows 11, live Shopify, WordPress, Cloudflare and Vercel sites, real Search Console API).
+
+- `seo_audit.py` 1.3.1:
+  - `--crawl` now works when the start URL redirects (apex→www, old→new domain, http→https): it crawls the host the start URL lands on and no longer reports false sitemap orphans.
+  - Product checks skip reference-only nodes (`{"@type":"Product","url":…}`, e.g. Shopify `ProductGroup.hasVariant`) and let variants inherit group-level name, image, brand and description — removes hundreds of false "Product without name/image/offers" findings.
+  - Pages over 5 MB gzip-compressed no longer crash the run (truncated bodies are decompressed as far as possible).
+  - `--urls` and redirect-map files accept a UTF-8 BOM (Notepad, PowerShell 5.1).
+  - Redirect maps compare URLs exactly, trailing slash included: `/a` → `/a/` is a redirect, not an "unchanged URL".
+  - `hreflang` accepts language-script-region codes such as `zh-hans-cn` and UN M.49 regions (`es-419`).
+  - The non-existent-URL probe follows redirects: a trailing-slash hop ending in 404 is info, not a warning; a redirect ending in 200 is reported as a soft 404.
+  - "First image is lazy-loaded" looks at the first image in `<main>` (or outside nav/header/footer/aside) and is reported once per image, not on every crawled page.
+  - Sitemap samples that only redirect are a warning, not critical.
+  - Exit code `3` for errors (missing input file, unexpected failure), distinct from `1` (findings) and `2` (start URL unreachable).
+  - Report output is UTF-8 on every console (no more `UnicodeEncodeError` on Windows cp1252).
+  - `--delay` (default 0.5 s) between page fetches in crawl mode.
+  - Warns when a page's HTML exceeds 5 MB and was truncated for analysis.
+  - Lint: removed unused variables and placeholder-less f-strings.
+- `search_data.py` 1.0.1: Bing `/Date(ms±hhmm)/` values are converted to the day of their own offset; `--urls` accepts a BOM; non-JSON API responses (proxies, HTML error pages) raise a clear error; timeouts and dropped connections are retried; CSV on stdout no longer doubles line endings on Windows; `compare --map` skips `#` comment rows; exit code `3` for file and input errors.
+- Content: Baidu rendering stated as documented (`Baiduspider-render/2.0`) with the rest marked *Unconfirmed*; exact SeznamBot user agent; Q&A removal (L8) cites the API change log and Google's forum announcement; nine stale or moved source links updated (Google-Extended, crawl budget, YouTube recommendations, Apple Business, rater guidelines, Abogacía code, Screaming Frog, Zyppy, Onely).
+- SKILL.md: shorter description; "Always avoid" now names expecting FAQ rich results (retired 7 May 2026).
+- Evaluated: with the skill, answers scored 4.65/5 vs 4.00/5 without it across the 13 evals (won all 13); no claims refuted in a source check of 219 links.
+- README rewritten in the blackwings.dev format (icon, "Why this exists", features, usage table, security, contributing rules, maintainer note); new `assets/` with the project icon; GitHub Actions workflow that compiles the scripts and validates the manifests on Python 3.9 and 3.13.
+- README: fixed an unclosed code fence; exit codes; how to get a Search Console token with your own OAuth Desktop client; Windows/PowerShell notes; remove a hand-copied `~/.claude/skills/seo-pro` when switching to the plugin.
+
 ## 1.3.0 — 2026-10-18
 
 An operating plan by business type; layers by business model (local, e-commerce, SaaS and services, publishers, regulated topics); new engine layers (video and images, other engines); cross-cutting playbooks (migrations, measurement, reputation, programmatic pages, governance); a redirect-map validator and Search Console/Bing data tools.

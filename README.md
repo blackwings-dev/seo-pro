@@ -1,83 +1,87 @@
+<div align="center">
+
+<img src="./assets/icono-seo-pro.png" alt="seo-pro" width="128" height="128">
+
 # seo-pro
 
-**End-to-end SEO for [Claude Code](https://claude.com/claude-code).** A skill that turns Claude into a senior SEO consultant that audits with evidence, implements changes in your codebase, and verifies that every change actually works.
+**An SEO skill for Claude Code that audits with evidence, fixes the code and checks that
+every change actually works — for Google, Bing, AI answer engines and the rest.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
-![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-e0873f)
-![Python 3.9+](https://img.shields.io/badge/auditor-Python%203.9%2B%2C%20zero%20deps-131316)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![Python](https://img.shields.io/badge/python-%E2%89%A5%203.9-brightgreen.svg)](https://www.python.org)
+[![Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen.svg)](#the-auditor)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-8A2BE2.svg)](#installation)
+[![Practices](https://img.shields.io/badge/practices-160-orange.svg)](#what-it-knows)
 
-Built by [blackwings.dev](https://github.com/blackwings-dev).
+</div>
 
 ---
 
-## Why
+## Why this exists
 
-Most SEO checklists are a mix of solid fundamentals, outdated folklore and tactics that can get a site penalised. `seo-pro` gives Claude a method instead of a list:
+**Most SEO advice is a mix of solid fundamentals, outdated folklore and tactics that can
+get a site penalised.** Checklists don't tell you which is which, don't know whether you
+are a plumber, a newsroom or a 50,000-product shop, and stop at "add a meta description".
 
-1. **Diagnose** — automated audit of the live site or a local production build, plus a review of where metadata, sitemaps, robots, structured data and redirects are generated in the code.
-2. **Plan** — findings prioritised by impact × effort, including what *not* to do.
-3. **Implement** — using your framework's native APIs (Next.js Metadata API, `sitemap.ts`, `robots.ts`, JSON-LD…), centralised and consistent.
-4. **Verify** — every change checked with `curl`, the auditor and the right Google tools. No "it compiles, so it works".
-5. **Follow up** — realistic timelines, KPIs and recurring checks.
-
-It is **engine-aware**: a shared core of 160 practices that works everywhere, plus a layer per search engine for what genuinely differs, and a conflict-resolution rule so a site meets the standard of every target engine at once. It ships with layers for **Google**, **Bing / Microsoft Copilot**, **video and images** (Google video, YouTube, Google Images) and **other engines** (Yandex, Baidu, Naver, Seznam, Brave, the Ecosia/Qwant index, Applebot), covers AI search (Google AI Overviews and AI Mode, Copilot, ChatGPT, Perplexity, Claude), and is up to date with 2026 changes such as the retirement of FAQ rich results, Google's spam policies applying to its AI features, and Bing's Copilot-era guidelines and AI Performance report.
-
-It starts from an **operating plan by business type**: a 10-day diagnosis, a playbook selector for local, e-commerce, publisher, SaaS, lead-generation and YMYL businesses (and hybrids), 0–90-day phases, indicators, cadences, a balanced dashboard and a quarterly plan template.
-
-It is also **business-model-aware**: layers for **local businesses** (Google Business Profile, Maps, Bing Places, Apple Business, reviews within the rules, location pages), **online stores** (faceted navigation, variants, product data, Merchant Center, stock lifecycle, shipping and returns, agentic commerce), **SaaS and professional services** (solution pages, docs, comparisons, activation, lead quality), **news publishers** (Google News, Top Stories, Discover, paywalls, syndication, corrections) and **health, finance and legal topics** (risk by decision, professional review, claims ledger, safe wording), so a clinic, a plumber, a newsroom and a 50,000-SKU shop each get the practices that apply to them.
-
-And it ships **playbooks** for the work every site eventually faces: **migrations** (redesigns, CMS, domain and hosting moves with go/no-go and rollback), **measurement** (attribution vs causation, cohorts, SEO experiments, alerts), **reputation** (digital PR, earned links, reviews, disavow), **programmatic pages** (data thresholds, legitimacy test, launch in waves) and **governance** (RACI, prioritisation, QA levels, maintenance, incidents).
-
-## What's inside
+`seo-pro` gives your assistant a method instead of a list:
 
 ```
-plugins/seo-pro/skills/seo-pro/
-├── SKILL.md                       # The workflow and principles
-├── references/
-│   ├── operating-plan.md          # O1–O14: start here — diagnosis, playbook selector, 90-day plan, dashboard, quarterly template
-│   ├── phase-1-technical.md       # 1–40   indexing, crawling, performance, architecture, security, legal, measurement
-│   ├── phase-2-content.md         # 41–85  keywords, intent, on-page, AI search (GEO), UX, internal linking
-│   ├── phase-3-authority.md       # 86–160 links, E-E-A-T, analytics, CRO, automation, international, maintenance
-│   ├── engines/
-│   │   ├── README.md              # Target engines, Google ↔ Bing decision matrix, conflict-resolution rule
-│   │   ├── video-images.md        # V1–V14: watch pages, VideoObject, key moments, YouTube, images, licensing, C2PA
-│   │   ├── other-engines.md       # W1–W12: IndexNow network, Yandex, Baidu, Naver, Seznam, Brave, EUSP, Applebot
-│   │   ├── ai-search.md           # A1–A18: AI answer engines — access funnel, per-agent controls, measurement protocol
-│   │   └── bing.md                # B1–B24: Bing Webmaster Tools, IndexNow, Copilot directives, AI Performance, Bing Places
-│   ├── verticals/
-│   │   ├── README.md              # Business-model layers and how they map onto engines
-│   │   ├── local.md               # L1–L22: eligibility, profiles (Google, Bing, Apple), reviews, location pages, measurement
-│   │   ├── ecommerce.md           # E1–E24: facets, variants, product data, Merchant Center, stock lifecycle, agentic commerce
-│   │   ├── saas-services.md       # S1–S14: SaaS journey, docs, comparisons, activation; lead-gen services and lead quality
-│   │   ├── publishers.md          # P1–P20: transparency, permanent URLs, Google News, News sitemaps, Discover, paywalls
-│   │   └── regulated.md           # Y1–Y16: YMYL risk, professional review, claims ledger, health/finance/legal rules
-│   ├── playbooks/
-│   │   ├── README.md              # When to use each playbook
-│   │   ├── migrations.md          # M1–M18: inventory, URL map, redirects, Change of Address, parity, go/no-go, rollback
-│   │   ├── measurement.md         # X1–X16: events, attribution vs causation, cohorts, experiments, alerts, dashboards
-│   │   ├── reputation.md          # R1–R14: digital PR, mentions, earned links, disavow, reviews, incidents
-│   │   ├── programmatic.md        # D1–D12: data assets, legitimacy test, thresholds, hubs, waves, AI pipelines, pruning
-│   │   └── governance.md          # G1–G14: RACI, backlog, prioritisation, QA levels Q0–Q4, maintenance, incidents
-│   ├── research-method.md         # Evidence hierarchy, confidence labels, 20-source register, platform links
-│   ├── myths.md                   # Popular advice that is false, outdated or dangerous — and what to do instead
-│   ├── nextjs.md                  # Next.js App Router implementation with code
-│   └── other-stacks.md            # Astro, WordPress, SPAs, Nginx, Apache, Cloudflare, Vercel/Netlify
-└── scripts/
-    ├── seo_audit.py               # Dependency-free auditor (Markdown/JSON report, CI exit codes, redirect-map validator)
-    └── search_data.py             # Search Console + Bing Webmaster API exports, before/after and old-vs-new comparison, brand split
+"Organic traffic dropped 40% since the 12th — find out why and fix it"
+
+→ diagnose   audit the live site and the code that generates metadata, sitemaps, redirects
+→ plan       findings ranked by impact × effort, including what NOT to do
+→ implement  with your framework's native APIs, centralised and consistent
+→ verify     curl, the auditor and the right Search Console / Bing reports
+→ follow up  realistic timelines, KPIs and recurring checks
 ```
 
-Each of the **160 practices** follows the same format: **Why → How → Expected result → Avoid → Verify**, with a priority level.
+Every recommendation is labelled by how sure we can be of it, and every number in the
+references points to a source you can check.
 
-## Evidence and scope
+---
 
-Recommendations are labelled by confidence (*Established*, *Supported*, *Hypothesis*, *Unknown*) using the evidence hierarchy in `research-method.md`: first-party site data and official search-engine documentation first, vendor studies and practitioner analysis as context. Its 20-source register is a reading map, not 20 independent confirmations. The full Spanish research syntheses behind it — [`docs/research-bible-2026-es.md`](docs/research-bible-2026-es.md) (general SEO) and [`docs/ai-search-study-2026-es.md`](docs/ai-search-study-2026-es.md) (AI answer engines), [`docs/local-maps-study-2026-es.md`](docs/local-maps-study-2026-es.md) (local SEO and maps), [`docs/ecommerce-study-2026-es.md`](docs/ecommerce-study-2026-es.md) (e-commerce), [`docs/publishers-study-2026-es.md`](docs/publishers-study-2026-es.md) (news), [`docs/regulated-study-2026-es.md`](docs/regulated-study-2026-es.md) (YMYL), [`docs/migrations-study-2026-es.md`](docs/migrations-study-2026-es.md), [`docs/measurement-study-2026-es.md`](docs/measurement-study-2026-es.md), [`docs/reputation-study-2026-es.md`](docs/reputation-study-2026-es.md) and [`docs/governance-study-2026-es.md`](docs/governance-study-2026-es.md), plus the operating plan [`docs/operating-plan-2026-es.md`](docs/operating-plan-2026-es.md) — live outside the skill so they don't load into context.
+## Features
 
-Rankings, traffic and AI citations are uncertain outcomes, never promises. Heuristics such as title length or one H1 are presented as useful defaults, not ranking rules.
+- **Engine-aware.** A shared core of 160 practices that works everywhere, a layer per
+  engine for what genuinely differs, and a conflict rule so one site meets the standard of
+  every target engine at once: **Google**, **Bing / Microsoft Copilot**, **AI answer
+  engines** (AI Overviews, AI Mode, ChatGPT, Perplexity, Claude), **video and images**
+  (Google video, YouTube, Google Images) and **other engines** (Yandex, Baidu, Naver,
+  Seznam, Brave, the Ecosia/Qwant index, Applebot).
+- **Business-model-aware.** Layers for **local businesses**, **online stores**, **SaaS and
+  professional services**, **news publishers** and **health, finance and legal topics** —
+  a clinic and a shop don't get the same advice.
+- **Starts with an operating plan.** A 10-day diagnosis, a playbook selector by business
+  type (and hybrids), 0–90-day phases, indicators, cadences, a balanced dashboard and a
+  quarterly plan template.
+- **Playbooks for the hard moments.** Migrations with go/no-go and rollback, measurement
+  and SEO experiments, reputation and digital PR, programmatic pages, governance.
+- **Evidence-led.** Claims are *Established*, *Supported*, *Hypothesis* or *Unknown*;
+  official documentation and first-party data come first, vendor studies are context.
+- **Myths called out.** A list of popular advice that is false, outdated or dangerous —
+  and what to do instead.
+- **A real auditor, not a prompt.** `seo_audit.py` crawls the site, validates migration
+  redirect maps and exits with CI-friendly codes. Python 3.9+, no packages.
+- **Your own data.** `search_data.py` pulls Search Console and Bing Webmaster data,
+  compares before/after or old/new URLs and splits brand from non-brand.
+- **Implements, doesn't just advise.** Next.js App Router code, plus Astro, WordPress,
+  SPAs, Nginx, Apache, Cloudflare and Vercel/Netlify.
+- **Up to date with 2026.** FAQ rich results retired, spam policies applied to AI
+  features, Bing's AI Performance report, Q&A removed from Google Maps, and more.
 
-The auditor checks HTML and HTTP signals. It doesn't execute JavaScript, confirm that a page is indexed, measure field Core Web Vitals or predict rankings: its findings are prompts for review.
+---
 
-## Install
+## Prerequisites
+
+| | |
+|---|---|
+| **Claude Code** | Any recent version with plugin support. |
+| **Python** | **≥ 3.9**, only for the auditor and the data tool. No packages to install. |
+| **Search Console / Bing** | Optional. Your own OAuth token or API key, only for `search_data.py`. |
+
+---
+
+## Installation
 
 ### As a plugin (recommended)
 
@@ -87,6 +91,9 @@ Inside Claude Code:
 /plugin marketplace add blackwings-dev/seo-pro
 /plugin install seo-pro@blackwings-dev
 ```
+
+> ⚠️ **Switching from a hand-copied version?** Delete `~/.claude/skills/seo-pro` first.
+> Otherwise the old standalone copy may be picked instead of the plugin.
 
 ### As a standalone skill
 
@@ -98,65 +105,187 @@ cp -r seo-pro/plugins/seo-pro/skills/seo-pro ~/.claude/skills/
 cp -r seo-pro/plugins/seo-pro/skills/seo-pro .claude/skills/
 ```
 
+---
+
 ## Usage
 
-The skill activates automatically when you ask for anything SEO-related — even without saying "SEO":
+The skill activates by itself for anything SEO-related — even if you never say "SEO". As
+a plugin you can also call it explicitly with `/seo-pro:seo-pro`.
 
-- "Audit the SEO of https://example.com and give me a prioritised plan"
-- "We launch on Monday — make sure the site is ready for Google"
-- "Google isn't indexing our product pages, find out why"
-- "Add sitemap, robots, canonicals and JSON-LD to this Next.js project"
-- "Write the service page for web development in Valencia, optimised for Google and for AI answers"
-- "Organic traffic dropped 40% since the 12th"
-- "Why aren't we showing up in Bing or getting cited by Copilot?"
-- "Should we block GPTBot? And how do we know if ChatGPT or Perplexity cite us?"
-- "We have three clinics and only one shows up on Google Maps"
-- "Our store has a million filter URLs crawled but not indexed — what do we block?"
-- "We're moving from WordPress to a headless CMS and a new domain next month"
-- "Our Discover traffic collapsed and Google News stopped showing us"
-- "Leadership wants to know how much revenue SEO actually generated"
-- "Review our clinic's treatment pages before we publish them"
-- "We want 5,000 city pages for our booking platform — is that programmatic SEO or spam?"
-- "We're launching in Russia and South Korea — what changes?"
-- "Plan our SEO for the next quarter — we're a B2B SaaS"
+| What you say | What happens |
+|---|---|
+| *"Audit https://example.com and give me a prioritised plan"* | Auditor + code review → plan by impact × effort |
+| *"We launch on Monday — is the site ready for Google?"* | Pre-launch checks, then verification of each fix |
+| *"Google isn't indexing our product pages"* | Indexing diagnosis: robots, canonicals, sitemaps, soft 404s, rendering |
+| *"Add sitemap, robots, canonicals and JSON-LD to this Next.js project"* | Implementation with the Metadata API, `sitemap.ts`, `robots.ts` |
+| *"Organic traffic dropped 40% since the 12th"* | Change analysis with Search Console data, causes ranked by evidence |
+| *"Why aren't we in Bing or cited by Copilot?"* | Bing layer: Webmaster Tools, IndexNow, Copilot directives |
+| *"Should we block GPTBot? Does ChatGPT cite us?"* | Per-agent decisions and a measurement protocol for AI citations |
+| *"We have three clinics and only one shows up on Maps"* | Local layer: profiles, categories, location pages, reviews within the rules |
+| *"A million filter URLs crawled but not indexed"* | Faceted-navigation policy per URL pattern |
+| *"Moving from WordPress to headless and a new domain next month"* | Migration playbook + redirect-map validation before go-live |
+| *"How much revenue did SEO actually generate?"* | Attribution vs causation, cohorts, an experiment design |
+| *"Review our clinic's treatment pages before we publish"* | YMYL layer: claims ledger, professional review, safe wording |
+| *"5,000 city pages — programmatic SEO or spam?"* | Legitimacy test, data thresholds, launch in waves |
+| *"Plan our SEO for next quarter — we're a B2B SaaS"* | Operating plan: diagnosis, playbook, 90-day phases, dashboard |
 
-As a plugin you can also invoke it explicitly with `/seo-pro:seo-pro`.
+Habits worth having:
+
+- **Give it the real URL or the repository.** It audits what is served, not what you
+  remember.
+- **Say who the site is for and where.** Business model and country change the advice.
+- **Ask it to verify.** Every change should end with a check, not with "it compiles".
+
+---
+
+## What it knows
+
+```
+plugins/seo-pro/skills/seo-pro/
+├── SKILL.md                       the workflow and principles
+├── references/
+│   ├── operating-plan.md          O1–O14  start here: diagnosis, playbook selector, 90-day plan
+│   ├── phase-1-technical.md       1–40    indexing, crawling, performance, architecture, security
+│   ├── phase-2-content.md         41–85   intent, on-page, AI search, UX, internal linking
+│   ├── phase-3-authority.md       86–160  links, E-E-A-T, analytics, CRO, international
+│   ├── engines/
+│   │   ├── README.md              target engines, decision matrix, conflict rule
+│   │   ├── bing.md                B1–B24  Webmaster Tools, IndexNow, Copilot, Bing Places
+│   │   ├── ai-search.md           A1–A18  access funnel, per-agent controls, measurement
+│   │   ├── video-images.md        V1–V14  watch pages, YouTube, images, licensing, C2PA
+│   │   └── other-engines.md       W1–W12  Yandex, Baidu, Naver, Seznam, Brave, Applebot
+│   ├── verticals/
+│   │   ├── local.md               L1–L22  profiles, reviews, location pages
+│   │   ├── ecommerce.md           E1–E24  facets, variants, Merchant Center, stock
+│   │   ├── saas-services.md       S1–S14  docs, comparisons, activation, lead quality
+│   │   ├── publishers.md          P1–P20  Google News, Discover, paywalls, corrections
+│   │   └── regulated.md           Y1–Y16  YMYL risk, professional review, claims ledger
+│   ├── playbooks/
+│   │   ├── migrations.md          M1–M18  URL map, redirects, go/no-go, rollback
+│   │   ├── measurement.md         X1–X16  attribution vs causation, experiments, alerts
+│   │   ├── reputation.md          R1–R14  digital PR, earned links, disavow, reviews
+│   │   ├── programmatic.md        D1–D12  legitimacy test, thresholds, waves
+│   │   └── governance.md          G1–G14  RACI, prioritisation, QA levels, incidents
+│   ├── research-method.md         evidence hierarchy and confidence labels
+│   ├── myths.md                   popular advice that is false, outdated or dangerous
+│   ├── nextjs.md                  Next.js App Router implementation with code
+│   └── other-stacks.md            Astro, WordPress, SPAs, Nginx, Apache, Cloudflare, Vercel
+└── scripts/
+    ├── seo_audit.py               the auditor
+    └── search_data.py             Search Console and Bing Webmaster data
+```
+
+Each practice follows the same format: **Why → How → Expected result → Avoid → Verify**,
+with a priority level. References load only when a task needs them, so the skill stays
+light in context.
+
+---
 
 ## The auditor
 
-`seo_audit.py` runs anywhere with Python 3.9+ — no packages to install.
+`seo_audit.py` runs anywhere with Python 3.9+ — nothing to install.
 
 ```bash
 python3 seo_audit.py https://example.com --crawl 100 --output report.md --json report.json
-python3 seo_audit.py http://localhost:3000 --crawl 50          # audit a local production build
-python3 seo_audit.py --urls critical-urls.txt --fail-on critical # cron/CI: exit code 1 on critical findings
-python3 seo_audit.py --redirect-map redirects.csv --fail-on critical  # validate a migration's old→new map
+python3 seo_audit.py http://localhost:3000 --crawl 50              # a local production build
+python3 seo_audit.py --urls critical-urls.txt --fail-on critical    # cron/CI
+python3 seo_audit.py --redirect-map redirects.csv --fail-on critical  # a migration's old→new map
 ```
 
-It checks:
+| Area | What it checks |
+|---|---|
+| **Indexability** | http/https/www variants and chains, robots.txt, sitemaps, `noindex`, `X-Robots-Tag`, canonicals, soft 404s |
+| **On-page** | Title, description, H1 and headings, `lang`, viewport, hreflang, Open Graph, JSON-LD validity |
+| **Performance** | Images without `alt` or size, lazy-loaded hero images, render-blocking scripts, DOM size, compression |
+| **Security headers** | HSTS, CSP, clickjacking, `nosniff`, Referrer-Policy |
+| **AI crawlers** | Every major search, training and user-fetch agent, with a warning when AI search agents are blocked |
+| **Bing & Copilot** | Bingbot blocks, `crawl-delay`, snippet directives, long-lived 302s, IndexNow key |
+| **Structured data** | `LocalBusiness`, `Product` (incl. `ProductGroup` variants), `NewsArticle`, paywall markup |
+| **Redirect maps** | Permanent single hops, expected 200 destinations, no home-page catch-alls, retired pages 404/410 |
+| **Crawl mode** | Broken links, links to redirects, duplicates, click depth, sitemap orphans, parameter URLs |
 
-- **Indexability** — http/https/www variants and redirect chains, robots.txt (including AI crawlers), sitemap validity and non-200 URLs, `noindex` and `X-Robots-Tag`, canonicals, soft 404s.
-- **On-page** — title and meta description, H1 and heading hierarchy, `lang`, viewport, hreflang, Open Graph, favicon, JSON-LD validity and types.
-- **Performance and rendering** — images without `alt` or dimensions, lazy-loaded hero images, render-blocking scripts, JavaScript-dependent content, DOM size, compression, ETag/304.
-- **Security headers** — HSTS, CSP, clickjacking protection, `nosniff`, Referrer-Policy.
-- **AI crawlers** — every major search, training and user-fetch agent with its purpose, and a warning when AI search agents are blocked.
-- **Bing & Copilot** — Bingbot blocks, `crawl-delay`, `noarchive`/`nocache`/`nosnippet` and their Copilot effect, 302s Bing treats as too long-lived, Bing Webmaster Tools verification, IndexNow key file (`--indexnow-key`).
-- **Local, product and article data** — `LocalBusiness` address, phone (and whether it's visible on the page), opening hours and self-serving ratings; `Product` offers, price, currency, availability, identifiers and duplicate Product markup from competing plugins; `NewsArticle`/`Article` fields, `dateModified` before `datePublished`, `max-image-preview:large` for Discover and paywall markup without `hasPart`.
-- **Redirect maps** (`--redirect-map file.csv`) — every old URL: permanent single hop, expected destination returning 200, no home-page catch-alls, retired pages answering 404/410, duplicates and planned chains in the map.
-- **Crawl mode** (`--crawl N`) — broken internal links, links to redirects, duplicate titles and descriptions, click depth, orphaned sitemap URLs and parameterised internal links grouped by parameter (facets, sorting, tracking).
+Every finding cites the practice to read. Exit codes: `0` nothing at the `--fail-on`
+level, `1` findings at that level, `2` start URL unreachable, `3` the check itself failed —
+so CI can tell *"the site has problems"* from *"the check didn't run"*.
 
-Every finding cites the practice number to read in the references.
+> **What it does not do.** It reads HTML and HTTP. It doesn't execute JavaScript, confirm
+> that a page is indexed, measure field Core Web Vitals or predict rankings. Use
+> PageSpeed Insights and Search Console for those; treat its findings as prompts for review.
+
+---
 
 ## Search Console and Bing data
 
-`search_data.py` (also dependency-free) pulls Search Console search analytics (paged, any search type incl. Discover and News), URL Inspection and sitemaps with your own OAuth token, and Bing Webmaster query, page, traffic and crawl stats with your API key. `compare` gives per-page deltas before/after a release or old vs new URLs after a migration; `brand-split` separates brand and non-brand. Credentials stay in environment variables — never in the repo or the chat.
+`search_data.py` (also dependency-free) pulls Search Console search analytics (paged, any
+search type including Discover and News), URL Inspection and sitemaps, and Bing Webmaster
+query, page, traffic and crawl stats. `compare` gives per-page deltas before/after a
+release or old vs new URLs after a migration; `brand-split` separates brand and non-brand.
 
 ```bash
-export GSC_ACCESS_TOKEN="$(gcloud auth application-default print-access-token)"   # scope webmasters.readonly
+export GSC_ACCESS_TOKEN="$(gcloud auth application-default print-access-token)"   # webmasters.readonly
 python3 search_data.py gsc-query --site sc-domain:example.com --start 2026-07-01 --end 2026-09-30 --dimensions page,query --out gsc.csv
 export BING_API_KEY=...   # Bing Webmaster Tools → Settings → API Access
 python3 search_data.py bing --method GetPageStats --site https://example.com/ --out bing.csv
-``` It doesn't execute JavaScript or measure field Core Web Vitals — use PageSpeed Insights and Search Console for those.
+```
+
+<details>
+<summary><b>Getting a Search Console token</b></summary>
+
+gcloud's built-in OAuth client is usually shown as "app blocked" for the
+`webmasters.readonly` scope. Create your own **Desktop app** OAuth client in a Google Cloud
+project, download its JSON and run:
+
+```bash
+gcloud auth application-default login --client-id-file=client.json \
+  --scopes=https://www.googleapis.com/auth/webmasters.readonly,https://www.googleapis.com/auth/cloud-platform
+gcloud auth application-default print-access-token
+```
+
+</details>
+
+<details>
+<summary><b>Windows / PowerShell</b></summary>
+
+- Set variables with `$env:GSC_ACCESS_TOKEN = (gcloud auth application-default print-access-token)`
+  and `$env:BING_API_KEY = ...`.
+- Read secrets without echoing them with `Read-Host -AsSecureString` (`-MaskInput` doesn't
+  exist in PowerShell 5.1).
+- Use `py` if `python3` isn't on the PATH.
+- PowerShell 5.1's `Set-Content -Encoding utf8` writes a BOM. Both scripts accept
+  BOM-prefixed URL and CSV files, but gcloud rejects a client JSON saved that way — save it
+  with `-Encoding ascii` or straight from the browser download.
+
+</details>
+
+---
+
+## Evidence and scope
+
+Recommendations follow the evidence hierarchy in `research-method.md`: first-party site
+data and official search-engine documentation first, vendor studies and practitioner
+analysis as context. **Rankings, traffic and AI citations are uncertain outcomes, never
+promises.** Heuristics such as title length or one H1 are useful defaults, not ranking
+rules.
+
+The full research behind the skill, in Spanish, lives in [`docs/`](./docs) — general SEO,
+AI answer engines, local, e-commerce, publishers, YMYL, migrations, measurement,
+reputation, governance and the operating plan. It stays outside the skill so it never
+loads into context.
+
+---
+
+## Security
+
+- **Credentials stay in environment variables** — never in the repository, never in a
+  report, never in the chat.
+- **Read-only by design.** `search_data.py` only reads; the Search Console scope it needs
+  is `webmasters.readonly`.
+- **The auditor only makes GET requests**, identifies itself in its user agent and waits
+  between pages (`--delay`, 0.5 s by default). Audit sites you own or are allowed to test.
+- **Nothing you couldn't show a Google reviewer.** The skill will not suggest hidden text,
+  fake reviews, bought links, cloaking or unreviewed mass content.
+
+---
 
 ## Principles
 
@@ -164,13 +293,48 @@ python3 search_data.py bing --method GetPageStats --site https://example.com/ --
 - **The served HTML is the truth.** Many AI crawlers don't run JavaScript.
 - **One URL, one intent, one canonical version.**
 - **Write for the answer, not the keyword.** That's what both classic and AI search reward.
-- **Nothing you couldn't show a Google reviewer.** No hidden text, fake reviews, bought links, cloaking or unreviewed mass content.
 - **Measure before and after.**
+
+---
 
 ## Contributing
 
-Issues and pull requests are welcome — especially new stack guides, engine or vertical layers, auditor checks and updates when search engines change their rules. Please cite an official source for any change to a factual claim.
+Issues and pull requests are welcome.
+
+1. Fork the repository and create a branch: `git checkout -b feature/what-it-does`.
+2. Make your change. `python -m py_compile` on both scripts and
+   `claude plugin validate .` must pass.
+3. Open a pull request describing **what changed, why, and how you verified it**.
+
+Please keep the rules that hold the skill together:
+
+- **Every factual claim cites an official source**, or is labelled as a hypothesis.
+- **Practice IDs are stable.** Add new ones at the end; never renumber.
+- **No dependencies in the scripts.** Standard library only, Python 3.9+.
+- **Nothing that could get a site penalised**, however well it "works".
+
+Good first contributions: new stack guides, auditor checks, and updates when a search
+engine changes its rules.
+
+### Reporting a security issue
+
+Please do **not** open a public issue. Contact the maintainers privately first.
+
+---
 
 ## License
 
-[MIT](LICENSE) © 2026 blackwings.dev
+[MIT](./LICENSE) — do what you like, no warranty.
+
+---
+
+## Who maintains this
+
+Built and maintained by [Black Wings](https://blackwings.dev) — software, AI and
+managed IT for companies, from Valencia, Spain. We wrote this because we needed it:
+we build and run sites for very different businesses, and no SEO checklist could tell a
+clinic, a shop and a newsroom apart.
+
+If it saves you the same afternoon it saved us, that is the whole point. Other things
+we have released are listed at [blackwings.dev/codigo-abierto](https://blackwings.dev/codigo-abierto)
+(in English: [blackwings.dev/en/open-source](https://blackwings.dev/en/open-source)).
