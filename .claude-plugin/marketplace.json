@@ -9,7 +9,7 @@
     {
       "name": "seo-pro",
       "source": "./plugins/seo-pro",
-      "description": "Evidence-led, engine-aware SEO for Claude Code: an operating plan by business type, 160 core practices, Bing/Copilot, AI, video/image and other-engine layers, local, e-commerce, SaaS, publisher and YMYL layers, playbooks for migrations, measurement, reputation, programmatic pages and governance, an auditor and Search Console/Bing data tools"
+      "description": "Evidence-led, engine-aware SEO for Claude Code: an operating plan by business type, 160 core practices, Bing/Copilot, AI, video/image and other-engine layers, local, e-commerce, SaaS, publisher and YMYL layers, playbooks for migrations, measurement, reputation, programmatic pages and governance, an auditor with JavaScript rendering, a server-log analyser and Search Console, Bing and Core Web Vitals data tools"
     }
   ]
 }
