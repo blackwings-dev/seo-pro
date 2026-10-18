@@ -1,6 +1,6 @@
 ---
 name: seo-pro
-description: End-to-end SEO for websites — technical SEO, on-page, content strategy, authority and visibility in AI search (Google AI Overviews and AI Mode, ChatGPT, Perplexity, Copilot) — with 160 verifiable practices, code-level implementation guides and an automated auditor. Use this skill whenever the user wants to rank a website, audit SEO, launch a new domain, fix indexing, improve Core Web Vitals, metadata, sitemaps, robots.txt, canonicals, hreflang, structured data/Schema/JSON-LD, internal linking, keyword strategy, content for Google or for AI (GEO), backlinks, E-E-A-T, Search Console, or organic traffic drops — even if they never say "SEO" (e.g. "Google isn't indexing my site", "I want to show up on Google", "get the site ready for production", "review the homepage before launch").
+description: End-to-end SEO for websites — technical SEO, on-page, content strategy, authority and visibility in AI search (Google AI Overviews and AI Mode, Bing and Microsoft Copilot, ChatGPT, Perplexity) — with 160 verifiable practices, code-level implementation guides and an automated auditor. Use this skill whenever the user wants to rank a website, audit SEO, launch a new domain, fix indexing, improve Core Web Vitals, metadata, sitemaps, robots.txt, canonicals, hreflang, structured data/Schema/JSON-LD, internal linking, keyword strategy, content for Google or for AI (GEO), backlinks, E-E-A-T, Search Console, Bing Webmaster Tools, IndexNow, Bing Places, or organic traffic drops — even if they never say "SEO" (e.g. "Google isn't indexing my site", "I want to show up on Google", "get the site ready for production", "review the homepage before launch").
 license: MIT
 ---
 
@@ -17,10 +17,14 @@ The core idea: SEO that works today is **a technically clean site that Google an
 | `references/phase-1-technical.md` | Practices 1–40: indexing, crawling, performance, architecture, security, legal, measurement | Launches, technical audits, "Google won't index", Core Web Vitals |
 | `references/phase-2-content.md` | Practices 41–85: keywords, intent, on-page, AI search (GEO), UX, internal linking | Writing or optimising pages, content strategy, metadata, Schema |
 | `references/phase-3-authority.md` | Practices 86–160: links, E-E-A-T, analytics, CRO, automation, international, maintenance | Indexed sites that need to grow, link building, multilingual, monitoring |
+| `references/engines/README.md` | Which engines to target, the Google ↔ Bing decision matrix and the rule for resolving conflicts | **Always**, at the start of a job, to decide the target engines |
+| `references/engines/bing.md` | Practices B1–B24: Bing Webmaster Tools, IndexNow, Copilot directives (`noarchive`/`nocache`), AI Performance, Bing Places, and a map of a 160-point Bing checklist onto the core | Whenever Bing/Copilot is a target (by default it is) |
 | `references/myths.md` | Popular SEO advice that is false, outdated or dangerous, and what to do instead | **Always** before recommending something "from the textbook" you are not sure about |
 | `references/nextjs.md` | Concrete Next.js (App Router) implementation: metadata, sitemap.ts, robots.ts, JSON-LD, next/image, next/font, headers, redirects | If the project uses Next.js (check `package.json`) |
 | `references/other-stacks.md` | Equivalents for static HTML, SPAs, Astro, WordPress, Nginx, Apache, Cloudflare, Vercel/Netlify | Any other stack |
 | `scripts/seo_audit.py` | Dependency-free automated audit (Python 3.9+) of a URL or a whole site; the report cites practice numbers | At the start of any job, and again to verify after changes |
+
+The core practices (1–160) apply to every search engine. Engine layers add only what differs, with their own IDs (B1… for Bing), so the core is never duplicated.
 
 Every practice in the references follows the same format: **Why → How → Expected result → Avoid → Verify**. Don't read all three phases at once: work out what the user needs and open the relevant section.
 
@@ -30,14 +34,15 @@ Pick the mode that matches the request. If it's unclear, start with step 1: with
 
 ### 1. Diagnose (always first)
 
-1. **Understand the project.** Stack (`package.json`, `composer.json`, `astro.config.*`, `wp-config.php`…), production domain, target language(s) and country(ies), business type (local, e-commerce, SaaS, publisher, services) and whether the site is already live.
-2. **Audit what is live** if there is a reachable URL:
+1. **Decide the target engines.** Google and Bing by default (Bing's index also feeds Microsoft Copilot and other products); add others when the market calls for them. Read `references/engines/README.md`: for every change, apply the core practice **and** the engine layers, and when engines disagree follow the conflict-resolution rule there (do both → stricter wins → user-facing truth wins → document the trade-off).
+2. **Understand the project.** Stack (`package.json`, `composer.json`, `astro.config.*`, `wp-config.php`…), production domain, target language(s) and country(ies), business type (local, e-commerce, SaaS, publisher, services) and whether the site is already live.
+3. **Audit what is live** if there is a reachable URL:
    ```bash
    python3 "${CLAUDE_SKILL_DIR}/scripts/seo_audit.py" https://example.com --crawl 50 --output seo-report.md
    ```
    If the site isn't in production yet, run a production build locally (`npm run build && npm start` — not the dev server, which doesn't reflect minification, caching or real headers) and audit `http://localhost:3000`.
-3. **Audit the code**: where `<title>`, meta description, canonical, sitemap, robots, JSON-LD, redirects and headers are generated. Look for pages rendered only on the client (content missing from `curl -s URL`).
-4. **Ask for what you cannot know**: Search Console access (exports of "Performance" and "Page indexing"), real business data (legal name, address, phone, opening hours, real reviews), competitors the user considers benchmarks. **Never invent business data, reviews, authors or figures** to fill Schema or content: it is deceptive, and fake reviews are illegal in the EU, the UK and the US.
+4. **Audit the code**: where `<title>`, meta description, canonical, sitemap, robots, JSON-LD, redirects and headers are generated. Look for pages rendered only on the client (content missing from `curl -s URL`).
+5. **Ask for what you cannot know**: Search Console and Bing Webmaster Tools access (exports of "Performance" and "Page indexing"), real business data (legal name, address, phone, opening hours, real reviews), competitors the user considers benchmarks. **Never invent business data, reviews, authors or figures** to fill Schema or content: it is deceptive, and fake reviews are illegal in the EU, the UK and the US.
 
 ### 2. Prioritised plan
 
@@ -80,7 +85,7 @@ Don't assume an SEO change works because the code compiles. Verify each one with
 
 ### 5. Follow up
 
-Leave the user with: what to check in Search Console and when (indexing: 1–2 weeks; rankings: 4–12 weeks; authority: months), and the recurring tasks (monthly audit, quarterly refresh of pillar content, broken-link review). If asked, automate them (see 120, 123, 131, 152).
+Leave the user with: what to check in Search Console and Bing Webmaster Tools (including AI Performance citations) and when (indexing: 1–2 weeks; rankings: 4–12 weeks; authority: months), and the recurring tasks (monthly audit, quarterly refresh of pillar content, broken-link review). If asked, automate them (see 120, 123, 131, 152).
 
 ## Realistic expectations
 
@@ -96,8 +101,9 @@ State these up front, because timelines are where SEO disappoints most:
 2. **The served HTML is the truth.** Whatever isn't in the server's initial response (or takes long to render) is fragile for Google and practically invisible to many AI crawlers, which don't execute JavaScript. Server-side rendering or static generation for everything indexable.
 3. **One URL, one intent, one canonical version.** Most "we don't rank" problems on mid-size sites are duplicates, cannibalisation or uncontrolled parameters.
 4. **Write for the answer, not for the keyword.** AI search engines cite passages that answer on their own, precisely and verifiably. That is exactly what classic ranking rewards too.
-5. **Nothing you couldn't show a Google reviewer.** If a tactic requires hiding something (hidden text, fake reviews, bought links, different content for bots, mass-produced unreviewed content, dates changed without real changes), don't do it. Since May 2026 Google explicitly applies its spam policies to AI Overviews and AI Mode as well, including cloaking aimed at AI crawlers and inauthentic brand mentions.
-6. **Measure before and after.** Every significant recommendation needs a metric and a baseline; otherwise nobody will know whether it worked.
+5. **Nothing you couldn't show a search-engine reviewer.** If a tactic requires hiding something (hidden text, fake reviews, bought links, different content for bots, mass-produced unreviewed content, dates changed without real changes), don't do it. Since May 2026 Google explicitly applies its spam policies to AI Overviews and AI Mode as well, including cloaking aimed at AI crawlers and inauthentic brand mentions; Bing's guidelines name prompt injection and AI manipulation outright.
+6. **Satisfy every target engine.** The core works everywhere; where engines differ, do what satisfies all of them (e.g. 301 rather than long-lived 302s for Bing, `hreflang` plus `lang` for Bing, no `noarchive` on content meant for Copilot).
+7. **Measure before and after.** Every significant recommendation needs a metric and a baseline; otherwise nobody will know whether it worked.
 
 ## Always avoid
 
