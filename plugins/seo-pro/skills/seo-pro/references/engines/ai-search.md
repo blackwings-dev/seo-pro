@@ -241,7 +241,7 @@ Levels: **A** official platform documentation/tools · **B** peer-reviewed resea
 | A | [Google: optimizing for generative AI features](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide) | No special markup, files, length or chunking required |
 | A | [Search Console: Search generative AI control](https://support.google.com/webmasters/answer/16908024) | Site-level include/exclude (global since 31 Aug 2026) |
 | A | [Search Console: Generative AI performance reports](https://developers.google.com/search/blog/2026/06/gen-ai-performance-reports) | Impressions, pages, country, device, date |
-| A | [Google-Extended](https://developers.google.com/crawling/docs/crawling-indexing/google-extended) | AI-use token, separate from Search |
+| A | [Google-Extended](https://developers.google.com/crawling/docs/crawlers-fetchers/google-common-crawlers#google-extended) | AI-use token, separate from Search |
 | A | [Google: robots.txt introduction](https://developers.google.com/search/docs/crawling-indexing/robots/intro) | robots.txt isn't access control |
 | A | [OpenAI crawlers](https://developers.openai.com/api/docs/bots) · [Publishers FAQ](https://help.openai.com/en/articles/12627856-publishers-and-developers-faq) | Agents, ~24 h propagation, IP lists, `utm_source=chatgpt.com`, `noindex` |
 | A | [Anthropic crawlers](https://support.claude.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler) | ClaudeBot, Claude-User, Claude-SearchBot, `bots.json` |
