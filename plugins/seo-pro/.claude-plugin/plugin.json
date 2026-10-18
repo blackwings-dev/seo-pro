@@ -1,7 +1,7 @@
 {
   "name": "seo-pro",
-  "version": "1.2.0",
-  "description": "Evidence-led, engine-aware SEO for Claude Code: 160 core practices, Bing/Copilot and AI answer engine layers (ChatGPT, Perplexity, Claude, Google AI), site auditor and stack guides",
+  "version": "1.3.0",
+  "description": "Evidence-led, engine-aware SEO for Claude Code: an operating plan by business type, 160 core practices, Bing/Copilot, AI, video/image and other-engine layers, local, e-commerce, SaaS, publisher and YMYL layers, playbooks for migrations, measurement, reputation, programmatic pages and governance, an auditor and Search Console/Bing data tools",
   "author": {
     "name": "blackwings.dev",
     "url": "https://github.com/blackwings-dev"
@@ -26,6 +26,27 @@
     "chatgpt",
     "perplexity",
     "ai-overviews",
-    "llm-seo"
+    "llm-seo",
+    "local-seo",
+    "google-business-profile",
+    "ecommerce-seo",
+    "merchant-center",
+    "news-seo",
+    "google-news",
+    "discover",
+    "ymyl",
+    "site-migration",
+    "seo-experiments",
+    "digital-pr",
+    "saas-seo",
+    "programmatic-seo",
+    "youtube",
+    "video-seo",
+    "image-seo",
+    "yandex",
+    "baidu",
+    "naver",
+    "search-console-api",
+    "redirects"
   ]
 }
