@@ -4,19 +4,25 @@
     {
       "id": 1,
       "prompt": "I have a Next.js 15 (App Router) site launching next week. There's no sitemap or robots.txt yet, every page title is 'My App', and the blog loads posts from Supabase inside a useEffect. Get it ready for Google.",
-      "expected_output": "Flags client-side content loading (practices 25/127) and duplicate titles (56) as blockers; implements centralised metadata with metadataBase, generateMetadata with canonicals, app/sitemap.ts with real lastModified, an environment-aware app/robots.ts that doesn't block /_next/, Organization/WebSite/BlogPosting JSON-LD and notFound() for real 404s; verifies with curl and the auditor against `npm start`; does not suggest the Indexing API.",
+      "expected_output": "Inspects the Next.js app and identifies the client-rendered content and duplicate titles as issues to prioritize; proposes or implements stack-native metadata and crawlable content fixes consistent with the project conventions; checks whether sitemap, robots, canonicals and 404 handling are needed; adds structured data only when accurate and useful; verifies changed output with available tools; does not suggest the Indexing API or claim code changes guarantee rankings.",
       "files": []
     },
     {
       "id": 2,
       "prompt": "My previous agency told me to change every article's publish date to today each month, add FAQ schema to every page to get the dropdown, and buy 50 blog links. Should I? It's a physiotherapy clinic in Valencia.",
-      "expected_output": "Advises against all three with the correct reasons (147 date bumping, FAQ rich results retired 7 May 2026, link buying is spam 101) and offers legitimate alternatives for a local YMYL business: Google Business Profile and NAP, LocalBusiness/MedicalBusiness Schema, credentialed authors, genuine content updates, links from professional bodies and local media.",
+      "expected_output": "Advises against date changes without meaningful updates, does not promise FAQ rich results (Google retired the feature on 7 May 2026), and explains the risk of buying links under current policies. Offers context-appropriate options for a local physiotherapy clinic, without fabricating credentials, reviews, or guaranteed outcomes.",
       "files": []
     },
     {
       "id": 3,
       "prompt": "Organic traffic to my store dropped 35% three weeks ago. All I know is that on the 2nd we deployed a redesign of the product pages. Where do I start?",
       "expected_output": "Follows the traffic-drop (159) and migration (160) protocols: asks for specific Search Console data, first checks noindex/canonical/robots/redirects/rendering after the deploy with the auditor, compares against Google updates and seasonality, segments by page type; does not propose rewriting content before diagnosing.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Our B2B SaaS docs never show up in ChatGPT or Perplexity answers. Someone on the team wants to add llms.txt, special 'AI schema' and rewrite every page into 300-word chunks. Our robots.txt blocks GPTBot and we use Cloudflare's 'block AI bots'. What should we do?",
+      "expected_output": "Works through the access-to-citation funnel first: checks whether OAI-SearchBot/PerplexityBot/Claude-SearchBot are blocked (Cloudflare toggle) versus GPTBot (training only), WAF verification by UA+IP, docs readable without JS or login; explains llms.txt, AI schema and 300-word chunking are not supported levers; separates search/training/user-fetch decisions; proposes a query panel, observation log and referral tracking (utm_source=chatgpt.com) with confidence labels, no guaranteed citations.",
       "files": []
     }
   ]
