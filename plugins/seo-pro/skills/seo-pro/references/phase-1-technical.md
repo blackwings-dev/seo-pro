@@ -174,7 +174,7 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 - **How:** decide per parameter type: (a) **parameters that create pages with their own demand** (e.g. "women's running shoes") → turn them into clean, indexable, linked URLs; (b) **parameters that only sort or filter with no demand** → don't generate crawlable links to them (use buttons/forms or `#` fragments), canonical to the clean version, and if Google still crawls them in bulk, a targeted `Disallow` in robots.txt; (c) tracking parameters (`utm_*`, `gclid`) → canonical without them. Search Console's URL Parameters tool no longer exists (removed in 2022).
 - **Expected result:** crawling concentrated on useful URLs (Crawl stats).
 - **Avoid:** blocking in robots.txt URLs that already carry a canonical — if Google can't crawl them it never sees the canonical; blocking parameters that do create valuable pages.
-- **Verify:** Crawl stats and Page indexing → "Duplicate…"; log analysis (124).
+- **Verify:** Crawl stats and Page indexing → "Duplicate…"; log analysis (124); the auditor's crawl mode lists parameterised internal links by parameter. Online stores: full facet policy, zero-result facets and already-indexed facets in `verticals/ecommerce.md` E5.
 
 ### 21. X-Robots-Tag — Medium
 - **Why:** it's the only way to `noindex` non-HTML files (PDFs, images, feeds).
@@ -188,7 +188,7 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 - **How:** dedicated pagination URLs (`/blog?page=2` or `/blog/page/2`), linked with `<a href>`, each with a self-referencing canonical and a differentiated title ("… – Page 2"). If you use infinite scroll or "load more", those URLs must also exist and be linked. Google no longer uses `rel="next/prev"` (harmless to keep).
 - **Expected result:** every listed item discovered and indexable.
 - **Avoid:** pagination via JavaScript buttons with no URL; `noindex` on pages 2+ (over time Google stops following their links).
-- **Verify:** disable JavaScript and check you can reach the last page.
+- **Verify:** disable JavaScript and check you can reach the last page. Store categories: `verticals/ecommerce.md` E4.
 
 ### 23. Correct redirects — High
 - **Why:** they preserve the old URL's signals and prevent losses during migrations.
@@ -221,6 +221,7 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 ---
 
 ## Brand, security, legal, accessibility and measurement
+- **Generated page sets:** data thresholds, the legitimacy test and launch in waves in `playbooks/programmatic.md` (D1–D12).
 
 ### 27. Social and brand profiles — Medium
 - **Why:** they're not links that pass authority (usually nofollow), but they help search engines and AIs recognise your brand as an **entity**, and they bring traffic and mentions.
@@ -231,10 +232,10 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 
 ### 28. Google Business Profile — Critical for local businesses
 - **Why:** it determines visibility in the map pack and "near me" searches.
-- **How:** only if you serve customers in person (physical location or service area). Precise primary category, NAP (name, address, phone) identical to the site and directories, hours, real photos, services/products, replies to every review. Link to the matching location page, not always the home page. On the site: `LocalBusiness` Schema with the same data.
-- **Expected result:** verified, complete profile; appearance in the local pack for brand and category searches in the area.
-- **Avoid:** keywords in the business name (against guidelines, triggers suspensions); virtual addresses; bought or incentivised reviews.
-- **Verify:** verified status; profile performance metrics.
+- **How:** only if you serve customers in person (physical location or service area) and the location is eligible. Real business name, precise primary category, NAP (name, address, phone) identical to the site and directories, regular and special hours, real photos, services/products, replies to reviews. Link to the matching location page, not always the home page. On the site: `LocalBusiness` Schema with the same data. Google ranks local results mainly on relevance, distance and prominence and publishes no weights. Profile Q&A is being removed from Maps (Dec 2025): answer customer questions on the website. Full layer, including eligibility, service areas, review programmes, Bing Places and Apple Business: `verticals/local.md`.
+- **Expected result:** verified, complete profile; eligibility for the local pack for brand and category searches in the area.
+- **Avoid:** keywords in the business name (against guidelines, triggers suspensions); virtual addresses; review gating; bought or incentivised reviews.
+- **Verify:** verified status; profile performance metrics per location (L19).
 
 ### 29. Content Security Policy — Medium
 - **Why:** not a ranking signal, but a hacked site (injected spam, malicious redirects) destroys SEO: Google security warnings, de-indexing and manual actions. CSP limits the damage of XSS injections.

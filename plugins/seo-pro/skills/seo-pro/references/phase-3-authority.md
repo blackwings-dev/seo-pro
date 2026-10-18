@@ -72,7 +72,7 @@ A link is worth having if **a human would add it even if Google didn't exist** (
 
 ### 98. Niche directories — Low/Medium
 - **How:** only directories your customers would actually use (professional bodies, industry associations, chambers of commerce, sector marketplaces, established local directories). NAP identical to the site and Google Business Profile.
-- **Avoid:** mass generic directories and "submit to 500 directories" packages.
+- **Avoid:** mass generic directories and "submit to 500 directories" packages. Local businesses: master location data and citation priorities in `verticals/local.md` L16–L17.
 
 ### 99. Local links — Low/Medium
 - **How:** links from sites in your target country and language matter because they usually come from your real market; the linking domain's TLD (e.g. `.es`, `.de`) is a weak signal by itself. Prioritise genuine topical and geographic relevance (media, associations and customers in your area).
@@ -84,7 +84,7 @@ A link is worth having if **a human would add it even if Google didn't exist** (
 
 ### 101. No paid links or mentions to manipulate rankings — Critical
 - **Why:** link schemes intended to manipulate rankings can violate search engine spam policies. Google's published policies also apply to its generative AI responses; check the relevant platform's current policy before making broader claims.
-- **How:** for sponsorships, mark the link `rel="sponsored"`; be wary of any agency promising "newspaper links" at a fixed price.
+- **How:** for sponsorships, mark the link `rel="sponsored"`; be wary of any agency promising "newspaper links" at a fixed price. Don't rent out sections of your site to third parties exploiting its signals (site reputation abuse). Earned-PR process, review programmes and disavow decisions: `playbooks/reputation.md`.
 - **Verify:** no issues under "Manual actions" in Search Console.
 
 ---
@@ -95,7 +95,7 @@ E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) is a quality
 
 ### 102. Real authors — High
 - **How:** a visible byline with real name, photo, role and relevant background; an author page with bio and links to professional profiles; `Person` JSON-LD as `author` with `url` and `sameAs`. For YMYL topics, review by a professional ("Reviewed by…") with verifiable credentials.
-- **Avoid:** invented authors or stock photos (deceptive, and easy to detect).
+- **Avoid:** invented authors or stock photos (deceptive, and easy to detect). High-impact topics: reviewer roles, claims ledger and corrections in `verticals/regulated.md`; news bylines and transparency in `verticals/publishers.md` P1.
 
 ### 103. Experience and empirical evidence — High
 - **How:** your own photos of the product or work, case studies with results, tests you've run, real attributed quotes from professionals, "how we do it" explanations. This is exactly what generic AI text can't provide.
@@ -117,6 +117,7 @@ E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) is a quality
 ## Advanced analytics and conversion optimisation (CRO)
 
 ### 107. Join Search Console with analytics — High
+- **See also:** event contracts, attribution vs causation, cohorts and experiments in `playbooks/measurement.md`.
 - **How:** connect Search Console to GA4 (or export both to Looker Studio/BigQuery) and join by landing page: impressions, clicks and position (GSC) with engagement and conversions (analytics). Prioritise: many impressions + low CTR → title/description; many clicks + low conversion → page content/CTA.
 - **Expected result:** a prioritised list of pages to optimise every month.
 
@@ -152,9 +153,10 @@ E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) is a quality
 - **How:** in Search Console, filter queries with many impressions, position 1–10 and low CTR for their position. Causes: an unappealing title or one misaligned with intent, a competitor's rich result, or an AI Overview or Google feature absorbing the click. Improve the title/description and, for questions, answer better on the page to become the cited source.
 
 ### 117. Separate brand and non-brand — High
-- **How:** in Search Console, a regex query filter for the brand, its variants and typos (e.g. `(?i)acme ?tools|acmetools`) and its inverse. Non-brand growth measures SEO; brand growth measures awareness.
+- **How:** Search Console's **branded queries filter** (since November 2025, for eligible top-level properties) plus your own regex for the brand, its variants and typos (e.g. `(?i)acme ?tools|acmetools`) and its inverse, for cohorts and properties the filter doesn't cover. Both are approximate (anonymised queries are excluded). Non-brand growth mostly reflects SEO; brand growth mostly reflects awareness (`playbooks/measurement.md` X9).
 
 ### 118. Keep Search Console history — Medium
+- **Tooling:** `scripts/search_data.py gsc-query` exports Search Console (paged up to 25,000 rows per request) and `bing --method GetPageStats` exports Bing, both dependency-free; `compare` and `brand-split` analyse the exports.
 - **How:** Search Console keeps only 16 months. Enable the bulk export to BigQuery or download monthly through the API to keep history and get data beyond the UI's 1,000-row limit.
 
 ### 119. Dashboard and cadence — High
@@ -170,7 +172,7 @@ E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) is a quality
 
 ### 121. Dynamic title templates for e-commerce — Medium
 - **How:** a template per page type (`{Product} {Key attribute} – {Brand} | {Store}`), with manual overrides for important pages.
-- **Avoid:** price or stock in the title when they change often (mismatch between what Google shows and the page; Google may rewrite). For price and availability in the SERP, the right channel is `Offer` Schema (71).
+- **Avoid:** price or stock in the title when they change often (mismatch between what Google shows and the page; Google may rewrite). For price and availability in the SERP, the right channel is `Offer` Schema (71). Category and facet titles: `verticals/ecommerce.md` E2, E5.
 
 ### 122. Automatic image conversion — High
 - **How:** server- or CDN-side optimisation (Next.js `next/image`, Cloudflare Images, Vercel Image Optimization, imgproxy, Thumbor) serving AVIF/WebP at the right size for each device.
@@ -229,6 +231,7 @@ E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) is a quality
 ### 136. Localise keywords for each market — High
 - **How:** research per country, not translation: "ordenador" (ES) vs "computadora" (MX), "flat" (UK) vs "apartment" (US). Localise prices, currency, date formats, examples and regulations too.
 - **Avoid:** unreviewed machine translation.
+- **See also:** the international module in `operating-plan.md` (O12) and, for Yandex, Baidu, Naver and Seznam markets, `engines/other-engines.md`.
 
 ### 137. Correct hreflang — High (if you have multiple language/country versions)
 - **How:** ISO 639-1 language codes and optional ISO 3166-1 region codes (`es`, `es-ES`, `es-MX`, `en`); each page links to all its alternates **and to itself**; reciprocal links (if A points to B, B must point to A); `x-default` for the selector or default version; absolute canonical URLs. hreflang doesn't prevent "duplicate content penalties" (they don't exist); it ensures the right language version is shown.
@@ -264,10 +267,11 @@ E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) is a quality
 ### 146. Video — Medium
 - **How:** embed videos where they help; for Google to index a video as such, it must be **the main content** of a page (its own watch page) with `VideoObject` (title, description, thumbnail, `uploadDate`, duration) and, if long, `Clip`/key moments. YouTube brings its own visibility in Google.
 - **Avoid:** expecting video results from a decorative video in an article.
+- **Full layer:** watch pages, `VideoObject`, key moments, livestreams, YouTube ranking, chapters, captions, Test & compare, AI disclosure: `engines/video-images.md` (V1–V11).
 
 ### 147. Update content for real (not just the date) — High
 - **How:** periodically review the articles with the most traffic or in decay (109): data, screenshots, links, new questions. When the change is **substantial**, update `dateModified` and the visible "Updated on…" date; keep the original publish date.
-- **Avoid:** changing the publish date to "today" without real changes to look fresh: Google explicitly advises against it and it can be treated as manipulation.
+- **Avoid:** changing the publish date to "today" without real changes to look fresh: Google explicitly advises against it and it can be treated as manipulation. Lifecycle states and review cadence by content type: `playbooks/governance.md` G9.
 
 ### 148. Monitor AI visibility — High
 - **See also:** the full measurement protocol (query panel, observation log, eight metrics, test design) is `engines/ai-search.md` A14–A17.
@@ -294,7 +298,7 @@ E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) is a quality
 
 ### 153. Disavow only when needed — Low
 - **How:** Google automatically ignores the vast majority of junk links. Use the disavow tool **only** if you have a manual action for unnatural links or know of a large past link purchase (e.g. by a previous agency) that could trigger one.
-- **Avoid:** mass-disavowing "toxic links" based on a tool's score: you may remove links that were helping you.
+- **Avoid:** mass-disavowing "toxic links" based on a tool's score: you may remove links that were helping you. Five-step process: `playbooks/reputation.md` R10.
 
 ### 154. Linkable assets — High
 - **How:** the asset your industry would cite: a free tool, an annual study, a reference template, a definitive guide kept up to date, a public dataset. Promote it actively (86, 96).
@@ -314,7 +318,10 @@ E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) is a quality
 ### 159. Traffic-drop protocol — High
 - **How:** 1) is it real? (compare with analytics; rule out tracking or consent problems); 2) when did it start? (exact date in Search Console); 3) does it coincide with a deploy (check noindex, robots, canonicals, redirects, 5xx), a Google update (Search Status Dashboard) or seasonality?; 4) which pages, queries, countries and devices are dropping? (segment); 5) did AI Overviews or other features appear on those SERPs?; 6) any manual actions or security issues?; 7) act on the cause, not the symptoms.
 - **Avoid:** rewriting the whole site in a panic during a core update (let it finish, then analyse).
+- **See also:** the change-analysis order and alert design in `playbooks/measurement.md` (X14–X15), the change log in `playbooks/governance.md` (G11) and, after a migration, `playbooks/migrations.md` M17.
 
 ### 160. Migrations and redesigns without losing traffic — Critical
 - **How:** before: full crawl of the old site, export of URLs with traffic and links, a 1:1 redirect map, a staging environment with `noindex`/password, checks of metadata and Schema on the new version. During: 301s live the same day, staging `noindex` removed, new sitemap submitted, Change of Address in Search Console if the domain changes. After: daily monitoring of 404s, indexing and traffic for 4–8 weeks; keep the old sitemap for a while to speed up redirect discovery.
 - **Avoid:** changing domain, URL structure, design and content at once (if something fails, you won't know what).
+- **Validate the map:** `scripts/seo_audit.py --redirect-map redirects.csv --fail-on critical` (single-hop 301/308, destination 200, no home catch-alls, retired pages 404/410); `scripts/search_data.py compare --map redirects.csv` compares old vs new URL performance.
+- **Full playbook:** inventory sources, master URL file, mapping rules, Change of Address for **all** domain variants (Google, June 2026), hosting/CDN moves, template parity, go/no-go, stabilisation, monitoring old + new and rollback: `playbooks/migrations.md` (M1–M18).

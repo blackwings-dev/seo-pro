@@ -153,6 +153,7 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 - **Expected result:** images indexed and Google Images traffic.
 - **Avoid:** empty `alt` on informative images; `alt="image"`; images containing important text with no text alternative.
 - **Verify:** the auditor counts images without `alt`.
+- **Full layer:** `<img src>` only, formats incl. AVIF, preferred image for Search/Discover, licensing and C2PA/IPTC provenance: `engines/video-images.md` (V12–V14).
 
 ### 59. Structured data (Schema) — High
 - **Why:** structured data describes page entities and can make eligible pages qualify for supported search features.
@@ -240,9 +241,9 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 
 ### 71. E-commerce: product pages and Merchant Center — High (if you sell online)
 - **Why:** free Google Shopping listings, rich product results (price, availability, shipping, returns) and the Shopping tab are a major source of transactional traffic.
-- **How:** `Product` + `Offer` (price, currency, availability, `shippingDetails`, `hasMerchantReturnPolicy`) on every product page; Google Merchant Center with a feed or automatic crawling; unique titles and descriptions (not the manufacturer's); out-of-stock handling (keep the URL marked "out of stock" if it will return; 301 to a substitute or 404 if not).
+- **How:** `Product` + `Offer` (price, currency, availability) in the server HTML of every product page, choosing between Google's *Product snippets* and *Merchant listings* requirements; `ProductGroup` for variants; shipping and return policies via Search Console settings, organization-level markup or Merchant Center (E14); Google Merchant Center with a feed or automatic crawling; original, decision-useful content (not only the manufacturer's); out-of-stock handling (keep the URL marked "out of stock" if it will return; redirect only to a substitute that truly meets the same need; 404/410 otherwise). Full layer — facets, variants, identifiers, catalogue reconciliation, lifecycle, agentic commerce: `verticals/ecommerce.md`.
 - **Expected result:** product results with price and availability in the SERP; products on Shopping.
-- **Avoid:** Schema prices that don't match the visible ones (Merchant Center suspends the account); manufacturer descriptions copied across thousands of products.
+- **Avoid:** Schema or feed prices that don't match the visible page and checkout (Merchant Center can disapprove items or suspend the account); manufacturer descriptions copied across thousands of products; several plugins emitting contradictory `Product` markup.
 - **Verify:** "Product snippets" and "Merchant listings" reports in Search Console.
 
 ---

@@ -36,7 +36,27 @@ Severity: 🔴 can cause harm (penalty, legal exposure, traffic loss) · 🟠 fa
 | "Disavow toxic links regularly" | Google ignores most junk; mass disavows can remove helpful links | Only after a manual action or a known link purchase | 153 | 🔴 |
 | "Rank in 30/60/90 days" | Timing depends on the site, query, market, competition, crawling and the changes made; competitive queries usually take months, but no fixed timeline is reliable | Set a baseline and review window; report uncertainty | SKILL.md | 🟡 |
 
-Engine-specific myths live in each engine layer (e.g. `engines/bing.md` → "Bing-specific myths").
+Engine-specific myths live in each engine layer (e.g. `engines/bing.md` → "Bing-specific myths"); business-model myths live in `verticals/local.md` ("Local myths") and `verticals/ecommerce.md` ("E-commerce myths"). The most common ones:
+
+| Claim | Reality | See |
+|---|---|---|
+| "Put the city and service in the business name" | Breaches Google's guidelines unless it's the real name; risks suspension | L3 |
+| "Open a listing in every city you want to rank in" | Only real, eligible locations; use genuine area pages | L2, L13 |
+| "Ask only happy customers for reviews" | Review gating; can breach platform rules and consumer law | L9 |
+| "`LocalBusiness` schema ranks you in Maps" | Describes data; no eligibility or ranking effect | L15 |
+| "Index every filter URL for long-tail" | Near-infinite duplicate/empty URLs; curate facets with demand | E5 |
+| "Block all facets in robots.txt" | Can hide `noindex` on facets already indexed and block useful pages | E5, 20 |
+| "The product feed lifts organic rankings" | Feeds power listings and ads, not organic ranking | E15, E20 |
+| "Delete every sold-out product" | Destroys demand, links and alternatives; handle by stock state | E17 |
+| "Apply for Google News / submit to Bing PubHub" | Google News needs no submission; PubHub is retired | P12, P18 |
+| "`NewsArticle` is required for Top Stories" | Google says no markup is required | P14 |
+| "A 301 keeps 100% of traffic" / "redirect everything to the home" | Strong move signal, not a guarantee; irrelevant redirects can be soft 404s | M7, M8 |
+| "GA4 says SEO generated the sale" | That's credit under an attribution model, not causation | X8 |
+| "Domain Authority is a ranking factor" | A vendor estimate, not a Google metric | R1 |
+| "Programmatic SEO is penalised" / "AI text makes each generated page unique" | Google targets scaled pages without value, whatever produced them | D2, D9 |
+| "YouTube tags matter a lot" | YouTube says tags play a minimal role | V8 |
+| "Yandex needs the `Host` directive" / "hreflang works on Baidu" | `Host` is gone from Yandex docs; Baidu isn't documented to support hreflang | W2, W4 |
+| "E-E-A-T is a score" / "a disclaimer lets us say anything" | Not a ranking factor or scale; disclaimers don't change substance or regulation | Y1, Y8 |
 
 ## AI search myths
 
