@@ -20,7 +20,7 @@ Most SEO checklists are a mix of solid fundamentals, outdated folklore and tacti
 4. **Verify** — every change checked with `curl`, the auditor and the right Google tools. No "it compiles, so it works".
 5. **Follow up** — realistic timelines, KPIs and recurring checks.
 
-It covers classic search **and AI search** (Google AI Overviews and AI Mode, ChatGPT, Perplexity, Copilot), and it is up to date with 2026 changes such as the retirement of FAQ rich results and Google's spam policies now applying to its AI features.
+It is **engine-aware**: a shared core of 160 practices that works everywhere, plus a layer per search engine for what genuinely differs, and a conflict-resolution rule so a site meets the standard of every target engine at once. It ships with layers for **Google** and **Bing / Microsoft Copilot**, covers AI search (Google AI Overviews and AI Mode, Copilot, ChatGPT, Perplexity), and is up to date with 2026 changes such as the retirement of FAQ rich results, Google's spam policies applying to its AI features, and Bing's Copilot-era guidelines and AI Performance report.
 
 ## What's inside
 
@@ -31,6 +31,9 @@ plugins/seo-pro/skills/seo-pro/
 │   ├── phase-1-technical.md       # 1–40   indexing, crawling, performance, architecture, security, legal, measurement
 │   ├── phase-2-content.md         # 41–85  keywords, intent, on-page, AI search (GEO), UX, internal linking
 │   ├── phase-3-authority.md       # 86–160 links, E-E-A-T, analytics, CRO, automation, international, maintenance
+│   ├── engines/
+│   │   ├── README.md              # Target engines, Google ↔ Bing decision matrix, conflict-resolution rule
+│   │   └── bing.md                # B1–B24: Bing Webmaster Tools, IndexNow, Copilot directives, AI Performance, Bing Places
 │   ├── myths.md                   # Popular advice that is false, outdated or dangerous — and what to do instead
 │   ├── nextjs.md                  # Next.js App Router implementation with code
 │   └── other-stacks.md            # Astro, WordPress, SPAs, Nginx, Apache, Cloudflare, Vercel/Netlify
@@ -71,6 +74,7 @@ The skill activates automatically when you ask for anything SEO-related — even
 - "Add sitemap, robots, canonicals and JSON-LD to this Next.js project"
 - "Write the service page for web development in Valencia, optimised for Google and for AI answers"
 - "Organic traffic dropped 40% since the 12th"
+- "Why aren't we showing up in Bing or getting cited by Copilot?"
 
 As a plugin you can also invoke it explicitly with `/seo-pro:seo-pro`.
 
@@ -90,6 +94,7 @@ It checks:
 - **On-page** — title and meta description, H1 and heading hierarchy, `lang`, viewport, hreflang, Open Graph, favicon, JSON-LD validity and types.
 - **Performance and rendering** — images without `alt` or dimensions, lazy-loaded hero images, render-blocking scripts, JavaScript-dependent content, DOM size, compression, ETag/304.
 - **Security headers** — HSTS, CSP, clickjacking protection, `nosniff`, Referrer-Policy.
+- **Bing & Copilot** — Bingbot blocks, `crawl-delay`, `noarchive`/`nocache`/`nosnippet` and their Copilot effect, 302s Bing treats as too long-lived, Bing Webmaster Tools verification, IndexNow key file (`--indexnow-key`).
 - **Crawl mode** (`--crawl N`) — broken internal links, links to redirects, duplicate titles and descriptions, click depth and orphaned sitemap URLs.
 
 Every finding cites the practice number to read in the references. It doesn't execute JavaScript or measure field Core Web Vitals — use PageSpeed Insights and Search Console for those.
