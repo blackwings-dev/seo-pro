@@ -1,0 +1,7 @@
+Icono seo-pro — Black Wings
+
+icono-seo-pro.svg / .png              Versión principal con "SEO" (≥ 128 px)
+icono-seo-pro-sin-texto.svg / .png    Versión pequeña sin texto (favicon, avatar, ≤ 128 px)
+
+Colores: fondo #111111 · lupa #FFFFFF · buscadores #4285F4 #00B294 #A855F7 #F59E0B
+Tipografía: Geist Bold (letter-spacing 2)
