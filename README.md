@@ -62,8 +62,17 @@ references points to a source you can check.
   and what to do instead.
 - **A real auditor, not a prompt.** `seo_audit.py` crawls the site, validates migration
   redirect maps and exits with CI-friendly codes. Python 3.9+, no packages.
+- **Sees what JavaScript hides.** `--render` loads every page in headless Chromium and
+  shows what only exists after JavaScript — text, links, title, canonical, structured data —
+  which most AI crawlers never see.
+- **A report you can hand over.** `--html` writes one self-contained page with a
+  "fix first" list, every finding filterable, light and dark.
+- **What bots really do.** `crawl_logs.py` reads your server logs and tells you what
+  Googlebot, Bingbot and the AI agents actually crawl, how much of it is wasted, and which
+  "Googlebots" are impostors — checked against each operator's published IP ranges.
 - **Your own data.** `search_data.py` pulls Search Console and Bing Webmaster data,
-  compares before/after or old/new URLs and splits brand from non-brand.
+  field Core Web Vitals from CrUX and PageSpeed Insights, compares before/after or old/new
+  URLs and splits brand from non-brand.
 - **Implements, doesn't just advise.** Next.js App Router code, plus Astro, WordPress,
   SPAs, Nginx, Apache, Cloudflare and Vercel/Netlify.
 - **Up to date with 2026.** FAQ rich results retired, spam policies applied to AI
@@ -76,8 +85,9 @@ references points to a source you can check.
 | | |
 |---|---|
 | **Claude Code** | Any recent version with plugin support. |
-| **Python** | **≥ 3.9**, only for the auditor and the data tool. No packages to install. |
-| **Search Console / Bing** | Optional. Your own OAuth token or API key, only for `search_data.py`. |
+| **Python** | **≥ 3.9**, only for the scripts. No packages to install. |
+| **Playwright** | Optional, only for `seo_audit.py --render`: `pip install playwright && python -m playwright install chromium`. |
+| **Search Console / Bing / CrUX** | Optional. Your own OAuth token or API keys, only for `search_data.py`. |
 
 ---
 
@@ -128,6 +138,8 @@ a plugin you can also call it explicitly with `/seo-pro:seo-pro`.
 | *"Review our clinic's treatment pages before we publish"* | YMYL layer: claims ledger, professional review, safe wording |
 | *"5,000 city pages — programmatic SEO or spam?"* | Legitimacy test, data thresholds, launch in waves |
 | *"Plan our SEO for next quarter — we're a B2B SaaS"* | Operating plan: diagnosis, playbook, 90-day phases, dashboard |
+| *"Here are our Nginx logs — is Googlebot wasting its crawl?"* | `crawl_logs.py`: verified bots, crawl waste, sections, sitemap URLs never fetched |
+| *"Our React site scores 94 in Lighthouse, so speed is fine?"* | Field data with `crux` + `--render` to show what only exists after JavaScript |
 
 Habits worth having:
 
@@ -171,8 +183,9 @@ plugins/seo-pro/skills/seo-pro/
 │   ├── nextjs.md                  Next.js App Router implementation with code
 │   └── other-stacks.md            Astro, WordPress, SPAs, Nginx, Apache, Cloudflare, Vercel
 └── scripts/
-    ├── seo_audit.py               the auditor
-    └── search_data.py             Search Console and Bing Webmaster data
+    ├── seo_audit.py               the auditor (optional JavaScript rendering, HTML report)
+    ├── crawl_logs.py              server-log analysis: search and AI bots, verified
+    └── search_data.py             Search Console, Bing Webmaster and Core Web Vitals data
 ```
 
 Each practice follows the same format: **Why → How → Expected result → Avoid → Verify**,
@@ -190,6 +203,7 @@ python3 seo_audit.py https://example.com --crawl 100 --output report.md --json r
 python3 seo_audit.py http://localhost:3000 --crawl 50              # a local production build
 python3 seo_audit.py --urls critical-urls.txt --fail-on critical    # cron/CI
 python3 seo_audit.py --redirect-map redirects.csv --fail-on critical  # a migration's old→new map
+python3 seo_audit.py https://example.com --crawl 30 --render --html report.html  # raw vs rendered, client report
 ```
 
 | Area | What it checks |
@@ -203,14 +217,43 @@ python3 seo_audit.py --redirect-map redirects.csv --fail-on critical  # a migrat
 | **Structured data** | `LocalBusiness`, `Product` (incl. `ProductGroup` variants), `NewsArticle`, paywall markup |
 | **Redirect maps** | Permanent single hops, expected 200 destinations, no home-page catch-alls, retired pages 404/410 |
 | **Crawl mode** | Broken links, links to redirects, duplicates, click depth, sitemap orphans, parameter URLs |
+| **Rendering** (`--render`) | Text, internal links, title, description, canonical, robots, H1 and JSON-LD that only exist after JavaScript; client-side redirects |
 
 Every finding cites the practice to read. Exit codes: `0` nothing at the `--fail-on`
 level, `1` findings at that level, `2` start URL unreachable, `3` the check itself failed —
 so CI can tell *"the site has problems"* from *"the check didn't run"*.
 
-> **What it does not do.** It reads HTML and HTTP. It doesn't execute JavaScript, confirm
-> that a page is indexed, measure field Core Web Vitals or predict rankings. Use
-> PageSpeed Insights and Search Console for those; treat its findings as prompts for review.
+> **What it does not do.** It reads HTML and HTTP, and executes JavaScript only with
+> `--render`. It doesn't confirm that a page is indexed, measure field Core Web Vitals
+> (that's `search_data.py crux`) or predict rankings; treat its findings as prompts for review.
+
+---
+
+## Server logs
+
+`crawl_logs.py` (dependency-free) reads Apache/Nginx combined or common logs, IIS/W3C and
+JSON lines from Cloudflare Logpush, Vercel or Fastly — `.gz` included — and answers what no
+crawler tool can: what search engines and AI agents **actually** fetch.
+
+```bash
+python3 crawl_logs.py access.log* --output crawl.md --json crawl.json
+python3 crawl_logs.py access.log --sitemap-urls urls.txt     # sitemap URLs Googlebot never fetched
+python3 crawl_logs.py cf.jsonl --format jsonl --host www.example.com
+python3 crawl_logs.py access.log --verify dns                 # reverse + forward DNS instead of IP ranges
+```
+
+| It reports | |
+|---|---|
+| **Per bot** | Hits, share, status codes, unique URLs — about 35 search, AI and SEO-tool crawlers |
+| **Verification** | Each claimed Googlebot, Bingbot, OpenAI, Anthropic, Perplexity or Applebot request checked against the operator's published IP ranges (or DNS); impostors reported apart and excluded |
+| **Crawl waste** | Hits spent on redirects, 404/410, other errors, tracking and other parameter URLs |
+| **Where it goes** | Sections, most-crawled URLs, parameters, daily trend |
+| **AI agents** | Search, training and user-triggered agents separately, to check robots.txt decisions are working |
+| **Sitemap coverage** | Sitemap URLs never fetched with a 200, and crawled pages missing from the sitemap |
+
+Range files are downloaded once a day and cached; `--ranges-dir` works fully offline.
+Logs contain IP addresses — personal data in the EU — so run it where the logs live and
+share only the aggregated report.
 
 ---
 
@@ -220,12 +263,17 @@ so CI can tell *"the site has problems"* from *"the check didn't run"*.
 search type including Discover and News), URL Inspection and sitemaps, and Bing Webmaster
 query, page, traffic and crawl stats. `compare` gives per-page deltas before/after a
 release or old vs new URLs after a migration; `brand-split` separates brand and non-brand.
+`crux` gets field Core Web Vitals (p75 of real Chrome users, per URL or origin, with a weekly
+history) and `psi` adds PageSpeed Insights field and lab data.
 
 ```bash
 export GSC_ACCESS_TOKEN="$(gcloud auth application-default print-access-token)"   # webmasters.readonly
 python3 search_data.py gsc-query --site sc-domain:example.com --start 2026-07-01 --end 2026-09-30 --dimensions page,query --out gsc.csv
 export BING_API_KEY=...   # Bing Webmaster Tools → Settings → API Access
 python3 search_data.py bing --method GetPageStats --site https://example.com/ --out bing.csv
+export CRUX_API_KEY=...   # Google Cloud API key with the Chrome UX Report API enabled
+python3 search_data.py crux --urls templates.txt --form-factor PHONE --fallback-origin --out crux.csv
+python3 search_data.py crux --origin https://example.com --history --out cwv-trend.csv
 ```
 
 <details>
@@ -302,13 +350,15 @@ loads into context.
 Issues and pull requests are welcome.
 
 1. Fork the repository and create a branch: `git checkout -b feature/what-it-does`.
-2. Make your change. `python -m py_compile` on both scripts and
-   `claude plugin validate .` must pass.
+2. Make your change. `python tools/check_skill.py`, `python -m unittest discover -s tests`
+   and `claude plugin validate .` must pass. The tests use local fixtures and mock APIs —
+   no network, no keys.
 3. Open a pull request describing **what changed, why, and how you verified it**.
 
 Please keep the rules that hold the skill together:
 
-- **Every factual claim cites an official source**, or is labelled as a hypothesis.
+- **Every factual claim cites an official source**, or is labelled as a hypothesis. A
+  weekly job checks every source link and opens an issue when one dies.
 - **Practice IDs are stable.** Add new ones at the end; never renumber.
 - **No dependencies in the scripts.** Standard library only, Python 3.9+.
 - **Nothing that could get a site penalised**, however well it "works".

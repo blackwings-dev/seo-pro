@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.4.0 — 2026-10-19
+
+Measure what the skill used to only recommend: server logs, field Core Web Vitals and JavaScript rendering — and keep the sources from going stale.
+
+- New `scripts/crawl_logs.py` 1.0.0 (dependency-free): reads Apache/Nginx combined or common logs, IIS/W3C and JSON lines (Cloudflare Logpush, Vercel, Fastly), `.gz` included. Recognises about 35 search, AI and SEO-tool crawlers; verifies Google, Bing, OpenAI, Anthropic, Perplexity and Apple bots against the operators' published IP-range files (cached daily, `--ranges-dir` for offline use) or by reverse + forward DNS; reports impostors apart. Per bot: hits, status codes, sections, most-crawled URLs, parameters, daily trend and crawl spent on redirects, errors and parameter URLs; AI agents by purpose; sitemap URLs Googlebot never fetched (`--sitemap-urls`).
+- `search_data.py` 1.1.0: `crux` (Chrome UX Report API: p75 LCP, INP, CLS, FCP and TTFB per URL or origin and form factor, good share, pass/fail, `--fallback-origin`, weekly `--history`) and `psi` (PageSpeed Insights field data with origin fallback plus one lab run: performance score, LCP, CLS, TBT).
+- `seo_audit.py` 1.4.0: `--render` loads each page in headless Chromium (optional Playwright) and reports what only exists after JavaScript — text, internal links, title, description, canonical, robots, H1 and JSON-LD — and client-side redirects; `--html` writes a self-contained report with a "fix first" list, filterable findings, light and dark themes. Fix: a relative `Sitemap:` line in robots.txt crashed the audit; it is now reported and resolved.
+- New `tools/check_skill.py`: practice IDs cited vs defined (references and the scripts' findings), backticked paths, relative links, table columns, SKILL.md frontmatter, manifests and version consistency.
+- New `tools/check_links.py` and a weekly GitHub Actions job that checks every source link and opens, updates or closes a "Broken source links" issue.
+- New test suite (`tests/`, standard library `unittest`): log parsing and verification, CrUX/PSI against local mock APIs, a fixture site for the auditor (including a JavaScript-only page for `--render`), and the integrity checks. CI runs it on Python 3.9 and 3.13.
+- References: practices 6, 25, 124 and 127, `engines/ai-search.md` A7 and SKILL.md point to the new tools; two new evals (server logs, SPA performance and rendering).
+
 ## 1.3.1 — 2026-10-18
 
 Fixes from real-world testing (Windows 11, live Shopify, WordPress, Cloudflare and Vercel sites, real Search Console API).
