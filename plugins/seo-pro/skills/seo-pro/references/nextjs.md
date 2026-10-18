@@ -27,7 +27,7 @@ export const siteConfig = {
   shortName: 'Brand',
   locale: 'en_US',
   defaultTitle: 'Brand Name: value proposition',
-  defaultDescription: 'A 140–160 character description with the value proposition.',
+  defaultDescription: 'A concise, accurate description of the site. Search engines may choose different snippet text.',
   twitter: '@brand',
   organization: {
     legalName: 'Brand Name Ltd',

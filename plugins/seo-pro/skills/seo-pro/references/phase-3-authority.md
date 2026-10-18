@@ -83,7 +83,7 @@ A link is worth having if **a human would add it even if Google didn't exist** (
 - **Verify:** the auditor's `--crawl` lists external links.
 
 ### 101. No paid links or mentions to manipulate rankings — Critical
-- **Why:** buying links that pass authority, PBNs, mass guest posting, exact-match footer links on client sites, or "mention" campaigns to sway AI answers are all within the spam policies (Google's also cover AI Overviews and AI Mode since May 2026).
+- **Why:** link schemes intended to manipulate rankings can violate search engine spam policies. Google's published policies also apply to its generative AI responses; check the relevant platform's current policy before making broader claims.
 - **How:** for sponsorships, mark the link `rel="sponsored"`; be wary of any agency promising "newspaper links" at a fixed price.
 - **Verify:** no issues under "Manual actions" in Search Console.
 
@@ -91,7 +91,7 @@ A link is worth having if **a human would add it even if Google didn't exist** (
 
 ## E-E-A-T, trust and business signals
 
-E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) isn't a ranking factor you can "switch on"; it's the framework Google's quality raters use to judge pages, which the algorithms try to approximate. **Trust** is what matters most, especially for YMYL topics (health, money, legal, safety).
+E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) is a quality-evaluation concept, not a single score or switch. Google's quality raters use it to assess search result quality; their ratings do not directly control individual rankings. Make trust, authorship, and evidence visible where it helps people, especially for high-impact topics.
 
 ### 102. Real authors — High
 - **How:** a visible byline with real name, photo, role and relevant background; an author page with bio and links to professional profiles; `Person` JSON-LD as `author` with `url` and `sameAs`. For YMYL topics, review by a professional ("Reviewed by…") with verifiable credentials.
@@ -158,7 +158,7 @@ E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) isn't a rank
 - **How:** Search Console keeps only 16 months. Enable the bulk export to BigQuery or download monthly through the API to keep history and get data beyond the UI's 1,000-row limit.
 
 ### 119. Dashboard and cadence — High
-- **How:** KPIs: non-brand clicks, impressions, indexed vs submitted pages, CWV, organic conversions, brand searches, referring domains, AI citations (148). Cadence: weekly (alerts and drops), monthly (audit, 152), quarterly (content, 149), yearly (strategy).
+- **How:** KPIs: non-brand clicks, impressions, indexed vs submitted pages, CWV, organic conversions, brand searches, referring domains, and AI visibility only where a product provides usable reporting or a documented manual sample (148). Choose a cadence suited to the site's scale and change rate; a sensible default is weekly (alerts and drops), monthly (audit, 152), quarterly (content, 149), yearly (strategy).
 
 ---
 
@@ -270,7 +270,8 @@ E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) isn't a rank
 - **Avoid:** changing the publish date to "today" without real changes to look fresh: Google explicitly advises against it and it can be treated as manipulation.
 
 ### 148. Monitor AI visibility — High
-- **How:** (1) define 20–50 queries representative of the business; (2) periodically check whether AI Overviews/AI Mode appear and cite you, and ask the same in ChatGPT, Perplexity, Copilot and Gemini, noting whether your brand is mentioned and linked; (3) in analytics, segment referral traffic from AI domains (`chatgpt.com`, `perplexity.ai`, `copilot.microsoft.com`, `gemini.google.com`, `claude.ai`…); (4) commercial AI-visibility trackers exist if volume justifies them.
+- **See also:** the full measurement protocol (query panel, observation log, eight metrics, test design) is `engines/ai-search.md` A14–A17.
+- **How:** (1) a fixed, stratified query panel (A14) checked on a schedule across the surfaces that matter, logging each run (A15); (2) the official reports — Search Console **Generative AI performance** and Bing **AI Performance**; (3) analytics segments for AI referrals (`utm_source=chatgpt.com`, `perplexity.ai`, `copilot.microsoft.com`, `gemini.google.com`, `claude.ai`…); (4) commercial AI-visibility trackers only if volume justifies them, reading their definitions first.
 - **Expected result:** knowing which topics get you cited and which don't, so you can strengthen content (69) and authority.
 - **Avoid:** drawing conclusions from a single test: answers vary by user, location and time.
 

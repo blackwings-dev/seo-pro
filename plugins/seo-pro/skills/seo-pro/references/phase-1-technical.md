@@ -293,7 +293,7 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 - **Verify:** manual test with Tab/Shift+Tab/Enter/Esc.
 
 ### 37. Make a deliberate decision about AI crawlers — High
-- **Why:** AI search engines cite the sources they can read. Blocking them protects your content from reuse, but makes you invisible in their answers.
+- **Why:** access by a particular crawler may be required for that product's retrieval or citation feature. Blocking one crawler does not necessarily affect other products or classic search; blocking all of them makes you invisible in their answers.
 - **How:** distinguish **search/citation** crawlers (`OAI-SearchBot`, `ChatGPT-User`, `PerplexityBot`, `Claude-SearchBot`/`Claude-User`) from **training** crawlers (`GPTBot`, `ClaudeBot`, `CCBot`). `Google-Extended` controls use for training Google's models but does **not** affect AI Overviews or AI Mode, which use Googlebot. For most businesses that want visibility: allow search crawlers and decide with the owner about training crawlers. Example:
   ```
   User-agent: GPTBot
@@ -303,9 +303,10 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
   ```
   `llms.txt` is a proposal with no confirmed adoption by the major search engines; cheap to add, but not a ranking lever.
 - **Expected result:** an explicit, documented decision — not an accidental block inherited from the CDN (some block "AI bots" by default).
-- **Avoid:** showing AI crawlers different content from what users see: that is *cloaking*, and since May 2026 Google treats it as spam in its AI features too.
+- **Avoid:** showing crawlers materially different content to manipulate search. Google's spam policies apply to its Search features, including generative AI responses; Bing's guidelines name prompt injection and AI manipulation. Verify current wording before extending the claim to other products.
 - **Verify:** the auditor lists which AI agents robots.txt allows or blocks; review the CDN's bot settings.
 - **Bing layer:** in Bing, `noarchive` removes content from Copilot answers and `nocache` limits citations to URL, title and snippet — see `engines/bing.md` B8.
+- **AI layer:** per-operator decision table, user-initiated fetchers that ignore robots.txt, WAF verification by IP, and Google's Search Console generative AI control — see `engines/ai-search.md` A2–A7.
 
 ### 38. Core entity structured data — High
 - **Why:** helps Google and AIs identify who is behind the site (name, logo, profiles, contact) and display the site name and logo correctly.

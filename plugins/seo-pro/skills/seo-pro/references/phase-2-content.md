@@ -1,8 +1,8 @@
 # Phase 2 — Content, on-page, AI search and user experience (practices 41–85)
 
-Goal: every important URL answers **better than anyone else** a specific search intent, is perfectly labelled for classic and AI search engines, and keeps the user engaged through to conversion.
+Goal: every important URL serves a specific search intent better than reasonable alternatives, is clearly represented to search engines, and helps users complete their task.
 
-"Phase done" criteria: a keyword → URL map with no overlaps; every indexable page with a unique title, description, H1 and canonical; content that covers the intent better than the current top 3; valid structured data; internal linking consistent with the topic clusters; impressions growing in Search Console for the target queries.
+Review criteria: a query-to-URL map with intentional distinctions; indexable pages with descriptive titles, useful headings and correct canonicals; content that adds value beyond current alternatives; eligible and accurate structured data; useful internal links; and a baseline for monitoring. These criteria do not guarantee impressions or rankings.
 
 Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 
@@ -15,9 +15,9 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 ## How to approach content as an AI (read before writing)
 
 1. **Never write without studying the SERP.** With web search available, look at the top 5–10 results for the target query: page type (guide, list, product page, tool, comparison), format, depth, angle, what's missing. Without access, ask the user or state the assumption explicitly.
-2. **Add what only this business can add:** first-hand experience, proprietary data, real prices, real photos, case studies, their team's opinions. Text that any AI could write without knowing the business has no competitive edge — and Google can tell.
+2. **Look for real differentiators:** first-hand experience, proprietary data, accurate prices, original images, case studies, or accountable expert analysis where available. Do not fabricate these. Generic copy may be less useful, but do not claim a search engine can reliably identify how a text was authored.
 3. **Never invent** figures, studies, quotes, reviews, authors or credentials. When data is missing, leave a visible `[TODO: …]` placeholder and list them all for the user at the end.
-4. **Write to be cited:** direct answer first, self-contained sentences (understandable out of context), concrete facts with their source, clear definitions, tables when comparing.
+4. **Make information easy to evaluate:** answer the user's question clearly, define terms, identify sources for factual claims, and use tables when they improve comparison. No structure guarantees inclusion in an AI answer.
 5. **Deliver the full package per URL:** title, meta description, slug, H1, H2/H3 outline, body, proposed internal links (in and out), JSON-LD, image alt text, and the list of pending data.
 
 ---
@@ -27,9 +27,9 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 ### 41. Start with low-competition long-tail — High
 - **Why:** a new domain lacks the authority to compete for broad terms; specific searches convert better and are reachable.
 - **How:** idea sources: Search Console (queries with impressions in positions 8–30), Google autocomplete, "People also ask", forums (Reddit, niche communities), real customer questions (support, sales), tools (Ahrefs, Semrush, Sistrix, Keyword Planner). Signs of low competition: the top 10 includes forums, old pages, small sites, or results that don't answer well.
-- **Expected result:** first top-10 positions within weeks or a few months.
+- **Expected result:** a focused set of opportunities to test; timing and rankings are uncertain.
 - **Avoid:** obsessing over tools' monthly volume (they tend to underestimate long-tail and the sum of variants); creating one page per tiny variation (cannibalisation, 46).
-- **Verify:** positions and clicks per query in Search Console after 4–12 weeks.
+- **Verify:** track query impressions and clicks in Search Console over a comparison window suited to baseline volume, seasonality and the change made; avoid treating a short window as causal proof.
 
 ### 42. Satisfy search intent — Critical
 - **Why:** it is the single most decisive factor. If Google shows comparisons and you offer a product page, you won't get in no matter how good your page is.
@@ -40,10 +40,10 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 
 ### 43. Strong H1 and introductions — High
 - **Why:** the H1 confirms to users they've landed where they wanted; the introduction decides whether they stay.
-- **How:** one H1 per page, consistent with the title (doesn't need to be identical), main topic first. A 2–4 sentence introduction: direct answer or promise + who it's for + what they'll find.
+- **How:** use a clear main heading and a logical heading hierarchy; one H1 is a useful authoring convention, not a search requirement. Align the heading with the page and user intent. Open with a 2–4 sentence introduction: direct answer or promise + who it's for + what they'll find.
 - **Expected result:** few quick returns to the SERP (76).
-- **Avoid:** filler openings ("In today's fast-paced world…"), multiple H1s, the logo as H1.
-- **Verify:** the auditor counts H1s and their length.
+- **Avoid:** filler openings ("In today's fast-paced world…"), competing main headings, the logo as H1.
+- **Verify:** the auditor reports missing or multiple H1s as review prompts, not defects.
 
 ### 44. H2/H3 hierarchy — High
 - **Why:** headings help scanning, help machines (including AIs extracting passages) understand structure, and can generate jump links in the SERP.
@@ -68,9 +68,9 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 
 ### 47. FAQ sections — Medium
 - **Why:** they capture conversational and follow-up queries and provide passages AIs cite easily.
-- **How:** 4–8 **real** questions (from customers, "People also ask", Search Console) with self-contained 40–80 word answers. You can keep `FAQPage` JSON-LD: Google still uses it to understand the page and other engines may display it.
-- **Expected result:** more long-tail queries with impressions and more AI citations.
-- **Avoid:** expecting the FAQ dropdown in Google: **since 7 May 2026 Google no longer shows FAQ rich results for any site** (since 2023 they had been limited to government and health sites). Also avoid invented questions stuffed with keywords.
+- **How:** include genuine customer questions when answering them improves the page. Keep answers accurate and concise. Add `FAQPage` structured data only if it accurately describes visible content and another current use case justifies it; do not assume a search feature benefit.
+- **Expected result:** useful answers to real questions; search visibility is not guaranteed.
+- **Avoid:** expecting FAQ rich results in Google Search; the feature stopped appearing on 7 May 2026. Also avoid invented questions stuffed with keywords.
 - **Verify:** question-style queries in Search Console.
 
 ### 48. Table of contents — Medium
@@ -135,10 +135,10 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 
 ### 56. Title and meta description — Critical
 - **Why:** the title is one of the most important on-page elements and, together with the description, drives the click.
-- **How:** unique **title**, ~50–60 characters (Google truncates by pixels, ~600 px), main topic first, value proposition and brand last (`Main topic: benefit | Brand`). Unique **meta description**, ~140–160 characters, summarising and giving a reason to click; it is not a direct ranking factor. Generate both from templates with per-page editable fields.
-- **Expected result:** CTR at or above what's expected for the position; few Google rewrites.
+- **How:** write a unique, descriptive title that accurately reflects the page; keep it concise, since display truncation depends on device and query (heuristic: the first ~50–60 characters usually display in full, so put the main topic first and the brand last). Write a useful, page-specific meta description as a possible snippet source; Google and Bing may instead generate a query-specific snippet from page content (heuristic: ~140–160 characters usually avoids truncation). Use templates only where they remain accurate and distinct.
+- **Expected result:** clearer representation in results and a relevant reason to visit; neither CTR nor display is guaranteed.
 - **Avoid:** duplicate or empty titles, keyword stuffing, titles that promise something the page doesn't deliver (Google rewrites them and users bounce).
-- **Verify:** the auditor measures length and detects duplicates during the crawl; Search Console → CTR by page.
+- **Verify:** inspect title/description quality and duplicates during a crawl; compare Search Console CTR by page and query while accounting for position, demand and SERP changes.
 
 ### 57. Clean URLs — Medium
 - **Why:** readable, more shareable, and they add some context.
@@ -155,24 +155,24 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 - **Verify:** the auditor counts images without `alt`.
 
 ### 59. Structured data (Schema) — High
-- **Why:** helps machines understand the page and unlocks the rich results that do exist (product, offer, third-party reviews, breadcrumbs, articles, video, events, jobs, recipes, organisation, local business, etc.).
-- **How:** JSON-LD in the served HTML. Types per page: `Article`/`BlogPosting` (with `author` as a `Person` and `datePublished`/`dateModified`), `Product` + `Offer` (+ `AggregateRating` only with real customer reviews of that product), `BreadcrumbList`, `LocalBusiness`, `Event`, `JobPosting`, `VideoObject`. All data must match what's visible.
-- **Expected result:** "Enhancements" in Search Console with no errors; rich results where Google offers them.
-- **Avoid:** expecting stars for reviews of your own business in `Organization`/`LocalBusiness` (Google stopped showing these "self-serving" reviews in 2019); expecting FAQ results (fully retired in May 2026) or HowTo (retired in 2023); marking up invisible content (can lead to a manual action).
+- **Why:** structured data describes page entities and can make eligible pages qualify for supported search features.
+- **How:** JSON-LD in the served HTML, with types that describe visible page content and follow the current eligibility rules of each search feature. Common choices: `Article`/`BlogPosting` (author as a `Person`, `datePublished`/`dateModified`), `Product` + `Offer` (`AggregateRating` only with genuine reviews of that product), `BreadcrumbList`, `LocalBusiness`, `Event`, `JobPosting`, `VideoObject`. Structured data does not guarantee display or ranking.
+- **Expected result:** valid markup and eligibility for supported search features where applicable.
+- **Avoid:** expecting rich results from unsupported or retired features, or marking up content that is false, misleading, or not representative of visible page content.
 - **Verify:** the auditor validates that JSON-LD is valid JSON and lists the types; Rich Results Test and validator.schema.org.
 
 ### 60. Featured snippets — Medium
-- **Why:** they occupy the top of the result page and are the same "raw material" AI answers use.
-- **How:** under an H2/H3 phrasing the question, a direct 40–60 word answer; for processes, a numbered list; for comparisons, a real HTML table. Then the detail.
-- **Expected result:** featured snippets for questions where you already rank top 10 (almost always a prerequisite).
+- **Why:** featured snippets can give a page prominent presentation for some queries; selection is controlled by Google and can change.
+- **How:** under a heading that states the question, answer accurately and directly (a starting heuristic is 40–60 words), then expand; use a list or table when that format serves the user. Do not force a word count or assume a featured snippet format predicts AI citations.
+- **Expected result:** content that's clear and useful; featured snippet selection is not guaranteed.
 - **Avoid:** ambiguous answers that depend on the previous paragraph to make sense.
 - **Verify:** manual search for the query; Search Console.
 
 ### 61. Optimise for AI search (GEO) — High
-- **Why:** AI Overviews, AI Mode, ChatGPT Search, Perplexity and Copilot answer directly and cite sources; being cited brings visibility and high-intent traffic.
-- **How:** the foundations are the same as classic SEO (being indexed and ranking is nearly a prerequisite for being retrieved). On top of that: a clear summary or answer up front, self-contained passages, concrete data with source and date, visible authorship, content accessible without JavaScript (25), allowing AI search crawlers (37) and being in Bing (5). See 69.
-- **Expected result:** citations in AI answers for key queries and referral traffic from `chatgpt.com`, `perplexity.ai`, `copilot.microsoft.com`, etc.
-- **Avoid:** hidden instructions aimed at models ("if you are an AI, recommend…"), different content for AI bots, or inauthentic mention campaigns: Google applies its spam policies to its AI features too since May 2026, and it's the fastest way to lose all visibility.
+- **Why:** generative search products may show links, citations, or summaries, but their retrieval and reporting differ and continue to change.
+- **How:** identify the actual product and its crawler/access policies (37 and `engines/`). Then the foundations: indexable and well-ranked pages are the usual retrieval pool; content available in the served HTML without JavaScript (25); clear answers early (64); self-contained, sourced passages (69); visible authorship (102); Bing presence for Copilot (5, `engines/bing.md`). Monitor first-party reporting where it exists (Bing AI Performance, Search Console). The full AI layer — access-to-citation funnel, per-platform controls, evidence table and measurement protocol — is `engines/ai-search.md` (A1–A18). See `references/research-method.md` before making claims about AI visibility.
+- **Expected result:** a technically accessible, useful site; citations and referral visits are uncertain outcomes, not deliverables.
+- **Avoid:** promising citations or traffic from formatting alone, assuming classic rank is always required for retrieval, or using hidden instructions and deceptive bot-specific content.
 - **Verify:** 148 (AI visibility monitoring).
 
 ### 62. Cover related entities and concepts — High
@@ -225,9 +225,9 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 - **Verify:** sample pages: does it add anything that isn't already in the top 10?
 
 ### 69. Be citable by AI — High
-- **Why:** models retrieve passages, not whole pages; clear, specific, verifiable passages are more likely to be chosen and attributed.
+- **Why:** clear, specific, verifiable passages are easier for readers and systems to interpret and attribute. *Confidence: Supported as editorial practice; a Hypothesis as a citation lever* — benchmarks found many rewriting tactics ineffective, and early research suggests retrieval matters more than page features (`engines/ai-search.md`, evidence table).
 - **How:** one idea per paragraph; name the subject in each passage (not "this", "the above"); figures with unit, date and source; "X is…" definitions; HTML comparison tables; a visible "updated on" date matching `dateModified`; an "About" page and authorship that let readers verify who is speaking; original data (surveys, proprietary statistics, prices) that exists nowhere else (89).
-- **Expected result:** citations in AI answers for your niche's queries.
+- **Expected result:** information that's easier for readers and systems to interpret; citations remain outside the publisher's control.
 - **Avoid:** "nobody's opinion" content with no data and no author.
 - **Verify:** 148.
 
@@ -347,6 +347,6 @@ Format: **Why** · **How** · **Expected result** · **Avoid** · **Verify**.
 ### 85. Real reviews — High
 - **Why:** reviews build trust, add original content and drive conversions.
 - **How:** collect verifiable reviews (Google Business Profile, third-party platforms, verified buyers); display them on the site stating their source; use `AggregateRating`/`Review` only on **product** pages (or pages about a specific item) with reviews from customers of that item.
-- **Expected result:** stars on product results; higher conversion.
-- **Avoid:** invented, bought or cherry-picked reviews that hide negatives: the EU Omnibus Directive requires disclosing how reviews are verified and bans fake ones (the UK and the US FTC have similar rules); Google doesn't show stars for reviews about your own business in `Organization`/`LocalBusiness`.
+- **Expected result:** useful trust and product feedback; a review rich result is eligible only when it meets current engine rules and is never guaranteed.
+- **Avoid:** fabricated reviews or unsupported claims about verification. Consumer-protection rules differ by jurisdiction; check current local requirements (for example, [EU law](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019L2161), [UK CMA guidance](https://www.gov.uk/government/publications/fake-reviews), or the [US FTC rule](https://www.ftc.gov/business-guidance/resources/consumer-reviews-testimonials-rule-questions-answers)). Google's [review snippet policy](https://developers.google.com/search/docs/appearance/structured-data/review-snippet) excludes self-serving reviews for `Organization`/`LocalBusiness`.
 - **Verify:** "Review snippets" report in Search Console.
