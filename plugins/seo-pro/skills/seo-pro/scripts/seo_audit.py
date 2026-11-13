@@ -308,6 +308,20 @@ class PageParser(HTMLParser):
 # ------------------------------------------------------------------------------------ Findings
 
 
+def blocking_scripts(scripts):
+    """src of <head> scripts that block rendering. async/defer, type=module (deferred) and nomodule
+    (legacy polyfill that module-capable browsers never fetch, e.g. Next.js) do not block."""
+    return [s["attrs"].get("src") for s in scripts
+            if s["in_head"] and s["attrs"].get("src")
+            and not any(k in s["attrs"] for k in ("async", "defer", "nomodule"))
+            and s["attrs"].get("type", "").lower() != "module"]
+
+
+def _looks_like_url(value: str) -> bool:
+    v = value.strip().lower()
+    return v.startswith(("/", "http://", "https://", "//", "?")) or "." in v.split("/")[0]
+
+
 @dataclass
 class Finding:
     severity: str
@@ -450,7 +464,8 @@ class Audit:
             for rec in csv.reader(fh):
                 if not rec or not rec[0].strip() or rec[0].strip().startswith("#"):
                     continue
-                if rec[0].strip().lower() in ("old_url", "old", "source", "from"):
+                # Header row in any language (old_url, origen, source…): skip it if it is not a URL
+                if not rows and not _looks_like_url(rec[0]) and (len(rec) < 2 or not _looks_like_url(rec[1])):
                     continue
                 old = urllib.parse.urljoin(base, rec[0].strip()) if base else rec[0].strip()
                 new = rec[1].strip() if len(rec) > 1 else ""
@@ -811,9 +826,7 @@ class Audit:
                      url, content_imgs[0].get("src", "")[:100])
 
         # ---- render-blocking scripts
-        blocking = [s["attrs"].get("src") for s in p.scripts
-                    if s["in_head"] and s["attrs"].get("src") and not any(k in s["attrs"] for k in ("async", "defer"))
-                    and s["attrs"].get("type", "").lower() != "module"]
+        blocking = blocking_scripts(p.scripts)
         if blocking:
             self.add("warning", "15", f"{len(blocking)} synchronous scripts in <head> block rendering", url,
                      ", ".join(b[:80] for b in blocking[:3]))

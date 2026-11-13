@@ -85,5 +85,24 @@ class AuditTest(unittest.TestCase):
         self.assertIn("Served HTML vs rendered DOM", html)
 
 
+    def test_nomodule_and_module_scripts_do_not_block(self):
+        p = seo_audit.PageParser()
+        p.feed('<html><head><script src="/a.js"></script><script src="/poly.js" nomodule></script>'
+               '<script type="module" src="/m.js"></script><script src="/d.js" defer></script></head><body></body></html>')
+        self.assertEqual(seo_audit.blocking_scripts(p.scripts), ["/a.js"])
+
+    def test_redirect_map_skips_header_in_any_language(self):
+        m = os.path.join(self.tmp, "map.csv")
+        with open(m, "w", encoding="utf-8") as fh:
+            fh.write(f"origen,destino\n{self.base}index.html,{self.base}index.html\n")
+        j = os.path.join(self.tmp, "m.json")
+        with redirect_stdout(io.StringIO()):
+            seo_audit.main(["--redirect-map", m, "--json", j])
+        with open(j, encoding="utf-8") as fh:
+            rm = json.load(fh)["site"]["redirect_map"]
+        self.assertEqual(rm["rows"], 1)
+        self.assertEqual(rm["counts"].get("critical", 0), 0)
+
+
 if __name__ == "__main__":
     unittest.main()

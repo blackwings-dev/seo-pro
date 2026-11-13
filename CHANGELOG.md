@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `seo_audit.py`: `nomodule` scripts in `<head>` (legacy polyfills such as Next.js's, never fetched by module-capable browsers) no longer count as render-blocking.
+- `seo_audit.py --redirect-map`: a header row in any language (`origen,destino`, `old_url,new_url`…) is skipped when it is not a URL, instead of being audited as a redirect.
+
 ## 1.4.0 — 2026-10-19
 
 Measure what the skill used to only recommend: server logs, field Core Web Vitals and JavaScript rendering — and keep the sources from going stale.
