@@ -1,4 +1,4 @@
-"""Tiny local stand-ins for the CrUX and PageSpeed Insights APIs, used by the tests (no network, no keys)."""
+"""Tiny local stand-ins for the CrUX, PageSpeed Insights and DataForSEO APIs, used by the tests (no network, no keys)."""
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -26,6 +26,42 @@ PSI = {"loadingExperience": {"metrics": {}},
                                        "cumulative-layout-shift": {"numericValue": 0.021},
                                        "total-blocking-time": {"numericValue": 410}}}}
 
+# DataForSEO: the same responses for every call; the last request received is kept for the assertions.
+DFS_LAST: dict = {}
+
+
+def dfs_envelope(result, cost=0.0125, task_code=20000):
+    return {"version": "0.1", "status_code": 20000, "status_message": "Ok.", "cost": cost, "tasks_count": 1,
+            "tasks_error": 0 if task_code == 20000 else 1,
+            "tasks": [{"status_code": task_code, "status_message": "Ok." if task_code == 20000 else "Payment Required.",
+                       "cost": cost, "result": result}]}
+
+
+def dfs_serp(keyword):
+    def org(rank, url, title):
+        return {"type": "organic", "rank_group": rank, "rank_absolute": rank + 1, "url": url, "title": title,
+                "domain": url.split("/")[2]}
+    if keyword == "vacio":
+        return [{"keyword": keyword, "items": [{"type": "people_also_ask", "rank_group": 1}]}]
+    items = [org(1, "https://www.a.com/guia/", "Guia A"),
+             {"type": "paid", "rank_group": 1, "url": "https://ads.example/"},
+             org(2, "https://www.google.com/goto?url=https%3A%2F%2Fb.com%2Fpost%3Fx%3D1", "Post B"),
+             org(3, "https://c.com/", "C"), org(4, "https://d.com/", "D"),
+             org(5, "https://a.com/guia", "Guia A repetida"), org(11, "https://fuera.com/", "Fuera del top 10")]
+    return [{"keyword": keyword, "items": items}]
+
+
+DFS_VOLUME = [{"keyword": "seo", "search_volume": 5400, "cpc": 1.2, "competition": "LOW", "competition_index": 12,
+               "low_top_of_page_bid": 0.5, "high_top_of_page_bid": 2.1},
+              {"keyword": "sin datos", "search_volume": None, "cpc": None, "competition": None,
+               "competition_index": None}]
+DFS_IDEAS = [{"seed_keywords": ["seo"], "items": [
+    {"keyword": "seo local", "keyword_info": {"search_volume": 880, "cpc": 0.9, "competition": 0.3,
+                                             "competition_level": "LOW"},
+     "keyword_properties": {"keyword_difficulty": 31}, "search_intent_info": {"main_intent": "commercial"}},
+    {"keyword": "que es seo", "keyword_info": {"search_volume": 2400, "cpc": None, "competition_level": None},
+     "keyword_properties": None, "search_intent_info": None}]}]
+
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
@@ -39,8 +75,23 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _dfs(self, req):
+        task = req[0]
+        DFS_LAST.update(path=self.path, auth=self.headers.get("Authorization"), task=task)
+        if self.headers.get("Authorization") is None:
+            return self._send(401, {"status_message": "unauthorized"})
+        if "search_volume" in self.path:
+            return self._send(200, dfs_envelope(DFS_VOLUME))
+        if "keyword_ideas" in self.path:
+            return self._send(200, dfs_envelope(DFS_IDEAS))
+        if task.get("keyword") == "sinsaldo":
+            return self._send(200, dfs_envelope(None, cost=0, task_code=40200))
+        return self._send(200, dfs_envelope(dfs_serp(task["keyword"])))
+
     def do_POST(self):
         req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+        if self.path.startswith("/dfs/"):
+            return self._dfs(req)
         if "nodata" in json.dumps(req):
             return self._send(404, {"error": {"code": 404, "message": "chrome ux report data not found"}})
         if "queryHistoryRecord" in self.path:
