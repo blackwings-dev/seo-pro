@@ -25,8 +25,10 @@ stderr after every request and in total (USD, as returned by the API). Live endp
 
 Limits worth stating in any report: Google Ads volumes are monthly averages, rounded, and group close variants;
 CPC and competition are paid-search metrics, not organic difficulty; a live SERP is one moment, one location, one
-language and one device. Since 31/10/2026 SERP Live sometimes returns google.com/goto?url= wrappers: they are
-unwrapped to the real URL here. Clustering is deterministic (no LLM): keywords whose top 10 share at least --min-shared
+language and one device. Since 31/10/2026 SERP Live returns google.com/goto?url= wrappers for part of the results
+(about half, sometimes all): `serp` asks DataForSEO to resolve them (resolve_goto_urls, adds up to 40 s per request;
+--no-resolve-goto turns it off). A wrapper that stays opaque is kept with unresolved=true and left out of the
+clustering, which reports how many URLs it excluded. Clustering is deterministic (no LLM): keywords whose top 10 share at least --min-shared
 URLs are grouped, which is evidence that Google treats them as one intent, not a guarantee.
 """
 from __future__ import annotations
@@ -56,6 +58,17 @@ ApiError = _sd.ApiError
 
 # ------------------------------------------------------------------------------------------- helpers
 
+def is_goto(url: str) -> bool:
+    """True for a Google goto wrapper (google.* host, path /goto), whatever the format of its url parameter."""
+    try:
+        p = urllib.parse.urlsplit(url or "")
+    except ValueError:
+        return False
+    host = (p.hostname or "").lower()
+    return (host == "google.com" or host.startswith("google.") or host.endswith(".google.com")
+            or host.startswith("www.google.")) and p.path.rstrip("/") == "/goto"
+
+
 def unwrap_goto(url: str) -> str:
     """google.com/goto?url=<real> (and country domains) -> the real URL; anything else is returned unchanged."""
     if not url:
@@ -64,10 +77,7 @@ def unwrap_goto(url: str) -> str:
         p = urllib.parse.urlsplit(url)
     except ValueError:
         return url
-    host = (p.hostname or "").lower()
-    is_google = host == "google.com" or host.startswith("google.") or host.endswith(".google.com") \
-        or (host.startswith("www.google."))
-    if is_google and p.path.rstrip("/") == "/goto":
+    if is_goto(url):
         target = urllib.parse.parse_qs(p.query).get("url", [""])[0]
         if target.startswith(("http://", "https://")):
             return target
@@ -129,7 +139,7 @@ class Meter:
         self.requests = 0
 
     def post(self, endpoint: str, task: dict, label: str) -> list[dict]:
-        data = _sd._request(DFS_BASE + endpoint, "POST", [task], _auth())
+        data = _sd._request(DFS_BASE + endpoint, "POST", [task], _auth(), timeout=300 if task.get("resolve_goto_urls") else 60)
         self.requests += 1
         cost = data.get("cost")
         if isinstance(cost, (int, float)):
@@ -203,12 +213,13 @@ def parse_serp(tasks: list[dict], keyword: str, top: int = 10) -> list[dict]:
                 if not isinstance(pos, int) or pos > top:
                     continue
                 url = unwrap_goto(it["url"])
-                key = norm_url(url)
+                unresolved = is_goto(url)
+                key = url if unresolved else norm_url(url)
                 if key in seen:
                     continue
                 seen.add(key)
                 rows.append({"keyword": keyword, "position": pos, "url": url, "title": it.get("title"),
-                             "domain": _host(url) or it.get("domain")})
+                             "domain": "" if unresolved else (_host(url) or it.get("domain")), "unresolved": unresolved})
     rows.sort(key=lambda r: r["position"])
     return rows
 
@@ -221,13 +232,16 @@ def cluster_keywords(serps: dict[str, list[str]], min_shared: int = 3, volumes: 
     Greedy around a head keyword (highest volume, then alphabetical): every unassigned keyword that shares
     >= min_shared URLs with the head joins its cluster. Members are never chained through each other, so one
     ambiguous keyword cannot glue two intents together. A keyword with an empty SERP is its own cluster, flagged
-    `no_serp`, because there is no evidence to group it. Shared URLs are those that appear in at least two
+    `no_serp`, because there is no evidence to group it. Unresolved goto wrappers are opaque tokens, not pages: they
+    are dropped before comparing and counted in `unresolved_excluded`. Shared URLs are those that appear in at least two
     SERPs of the cluster, most repeated first.
     """
     volumes = volumes or {}
     min_shared = max(1, int(min_shared))
-    sets = {k: {norm_url(u) for u in urls if u} for k, urls in serps.items()}
-    raw = {k: {norm_url(u): u for u in urls if u} for k, urls in serps.items()}
+    excluded = {k: sum(1 for u in urls if u and is_goto(unwrap_goto(u))) for k, urls in serps.items()}
+    serps = {k: [unwrap_goto(u) for u in urls if u and not is_goto(unwrap_goto(u))] for k, urls in serps.items()}
+    sets = {k: {norm_url(u) for u in urls} for k, urls in serps.items()}
+    raw = {k: {norm_url(u): u for u in urls} for k, urls in serps.items()}
     order = sorted(sets, key=lambda k: (-(volumes.get(k) or 0), k))
     assigned: set[str] = set()
     out: list[dict] = []
@@ -250,7 +264,8 @@ def cluster_keywords(serps: dict[str, list[str]], min_shared: int = 3, volumes: 
         vols = [volumes.get(m) for m in members]
         out.append({"cluster": head, "keywords": members, "keyword_count": len(members),
                     "total_volume": int(sum(v for v in vols if v)) if any(v is not None for v in vols) else None,
-                    "shared_urls": shared_urls, "no_serp": not sets[head]})
+                    "shared_urls": shared_urls, "no_serp": not sets[head],
+                    "unresolved_excluded": sum(excluded[m] for m in members)})
     out.sort(key=lambda c: (-(c["total_volume"] or 0), -c["keyword_count"], c["cluster"]))
     return out
 
@@ -306,12 +321,19 @@ def kw_ideas(args) -> int:
     return 0
 
 
+def _serp_task(k: str, args) -> dict:
+    task = {"keyword": k, **_loc(args), "depth": 10}
+    if not getattr(args, "no_resolve_goto", False):
+        task["resolve_goto_urls"] = True  # DataForSEO resolves goto wrappers; adds up to 40 s per request
+    return task
+
+
 def fetch_serps(kws: list[str], args, meter: Meter) -> dict[str, list[dict]]:
     out = {}
     for i, k in enumerate(kws):
         if i:
             time.sleep(args.pause)
-        task = {"keyword": k, **_loc(args), "depth": 10}
+        task = _serp_task(k, args)
         out[k] = parse_serp(meter.post(EP_SERP, task, f"serp {i + 1}/{len(kws)}"), k)
     return out
 
@@ -319,16 +341,21 @@ def fetch_serps(kws: list[str], args, meter: Meter) -> dict[str, list[dict]]:
 def serp(args) -> int:
     kws = read_keywords(args)
     check_cap(kws, args.max_keywords)
-    plan = [(EP_SERP, {"keyword": k, **_loc(args), "depth": 10}) for k in kws]
+    plan = [(EP_SERP, _serp_task(k, args)) for k in kws]
     if _dry(args, plan):
         return 0
     meter = Meter()
     data = fetch_serps(kws, args, meter)
     meter.summary()
+    bad = sum(1 for rows in data.values() for r in rows if r["unresolved"])
+    if bad:
+        print(f"warning: {bad} result(s) still unresolved goto wrappers (unresolved=true); they are excluded from "
+              "kw-cluster.", file=sys.stderr)
     if args.format == "json":
         _emit([{"keyword": k, "results": rows} for k, rows in data.items()], args, [])
     else:
-        _emit([r for rows in data.values() for r in rows], args, ["keyword", "position", "url", "title", "domain"])
+        _emit([r for rows in data.values() for r in rows], args,
+              ["keyword", "position", "url", "title", "domain", "unresolved"])
     return 0
 
 
@@ -372,18 +399,23 @@ def kw_cluster(args) -> int:
     else:
         kws = read_keywords(args)
         check_cap(kws, args.max_keywords)
-        if _dry(args, [(EP_SERP, {"keyword": k, **_loc(args), "depth": 10}) for k in kws]):
+        if _dry(args, [(EP_SERP, _serp_task(k, args)) for k in kws]):
             return 0
         meter = Meter()
         serps = {k: [r["url"] for r in rows] for k, rows in fetch_serps(kws, args, meter).items()}
         meter.summary()
     volumes = _load_volumes(args.volumes) if args.volumes else {}
     clusters = cluster_keywords(serps, args.min_shared, volumes)
+    skipped = sum(c["unresolved_excluded"] for c in clusters)
+    if skipped:
+        print(f"warning: {skipped} unresolved goto URL(s) excluded from the overlap; clusters may be under-merged "
+              "(re-run `serp`, or without --no-resolve-goto).", file=sys.stderr)
     if args.format == "csv":
         rows = [{"cluster": c["cluster"], "keywords": " | ".join(c["keywords"]), "keyword_count": c["keyword_count"],
                  "total_volume": c["total_volume"], "shared_urls": " | ".join(c["shared_urls"]),
-                 "no_serp": c["no_serp"]} for c in clusters]
-        _sd._write_csv(rows, args.out, ["cluster", "keywords", "keyword_count", "total_volume", "shared_urls", "no_serp"])
+                 "no_serp": c["no_serp"], "unresolved_excluded": c["unresolved_excluded"]} for c in clusters]
+        _sd._write_csv(rows, args.out, ["cluster", "keywords", "keyword_count", "total_volume", "shared_urls", "no_serp",
+                                        "unresolved_excluded"])
     else:
         _emit(clusters, args, [])
     return 0
@@ -417,9 +449,12 @@ def main(argv=None) -> int:
     s.set_defaults(fn=kw_ideas)
     s = sub.add_parser("serp", help="organic top 10 for each keyword (Google SERP live advanced)")
     _common(s, "csv")
+    s.add_argument("--no-resolve-goto", action="store_true", help="do not ask DataForSEO to resolve google.com/goto "
+                   "wrappers (faster, but about half the URLs stay opaque)")
     s.set_defaults(fn=serp)
     s = sub.add_parser("kw-cluster", help="cluster keywords by shared top-10 URLs (deterministic)")
     _common(s, "json")
+    s.add_argument("--no-resolve-goto", action="store_true", help="when fetching SERPs: do not resolve goto wrappers")
     s.add_argument("--serp-file", help="SERPs from `serp` (JSON or CSV); without it the SERPs are fetched (cost)")
     s.add_argument("--volumes", help="CSV from kw-volume (keyword, search_volume) to order clusters and add volume")
     s.add_argument("--min-shared", type=int, default=3, help="shared top-10 URLs needed to group (default 3)")

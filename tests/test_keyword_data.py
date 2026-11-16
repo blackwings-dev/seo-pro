@@ -172,6 +172,62 @@ class KeywordDataTest(unittest.TestCase):
             code, out, _ = self.run_cmd("kw-cluster", "--serp-file", s)
             self.assertEqual(json.loads(out)[0]["keyword_count"], 2)
 
+    # ---- goto wrappers that DataForSEO resolves (resolve_goto_urls)
+    def test_is_goto_opaque_token(self):
+        self.assertTrue(self.kd.is_goto("https://google.com/goto?url=CAESabc&gsessionid=x"))
+        self.assertFalse(self.kd.is_goto("https://google.com/search?q=goto"))
+        self.assertFalse(self.kd.is_goto("https://a.com/goto?url=CAES"))
+        # an opaque token is not an http URL: unwrap leaves it alone
+        self.assertTrue(self.kd.is_goto(self.kd.unwrap_goto("https://google.com/goto?url=CAESabc")))
+
+    def test_serp_asks_for_resolution_and_gets_real_urls(self):
+        code, out, err = self.run_cmd("serp", "--keywords", "opaco", "--format", "json")
+        self.assertEqual(code, 0)
+        self.assertTrue(mock_apis.DFS_LAST["task"]["resolve_goto_urls"])
+        res = json.loads(out)[0]["results"]
+        self.assertTrue(all(not r["unresolved"] for r in res))
+        self.assertEqual(res[0]["domain"], "real1.com")
+        self.assertNotIn("warning", err)
+
+    def test_serp_partially_unresolved_is_flagged(self):
+        code, out, err = self.run_cmd("serp", "--keywords", "opacoparcial", "--format", "json")
+        res = json.loads(out)[0]["results"]
+        self.assertEqual([r["unresolved"] for r in res], [False, False, True, True])
+        self.assertEqual(res[2]["domain"], "")
+        self.assertIn("2 result(s) still unresolved", err)
+
+    def test_no_resolve_goto_flag(self):
+        _, out, _ = self.run_cmd("serp", "--keywords", "opaco", "--no-resolve-goto", "--format", "json")
+        self.assertNotIn("resolve_goto_urls", mock_apis.DFS_LAST["task"])
+        self.assertTrue(all(r["unresolved"] for r in json.loads(out)[0]["results"]))
+
+    def test_cluster_excludes_unresolved_and_reports(self):
+        goto = lambda n: f"https://google.com/goto?url=CAES{n}"  # noqa: E731
+        # identical opaque tokens would "overlap" if they were compared: they must not count
+        serps = {"a": [goto(1), goto(2), goto(3), "https://x.com/"], "b": [goto(1), goto(2), goto(3), "https://y.com/"]}
+        res = self.kd.cluster_keywords(serps, 3)
+        self.assertEqual(len(res), 2)
+        self.assertEqual(sum(c["unresolved_excluded"] for c in res), 6)
+        only_goto = self.kd.cluster_keywords({"a": [goto(1)]}, 1)
+        self.assertTrue(only_goto[0]["no_serp"])
+
+    def test_kw_cluster_with_unresolved_warns(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = os.path.join(d, "k.txt")
+            with open(f, "w", encoding="utf-8") as fh:
+                fh.write("opacoparcial" + chr(10) + "opacoparcial dos" + chr(10))
+            code, out, err = self.run_cmd("kw-cluster", "--keywords-file", f, "--min-shared", "2")
+            self.assertEqual(code, 0)
+            clusters = json.loads(out)
+            self.assertEqual(clusters[0]["keyword_count"], 2)  # they share the 2 resolved URLs
+            self.assertEqual(clusters[0]["unresolved_excluded"], 4)
+            self.assertIn("4 unresolved goto URL(s) excluded", err)
+
+    def test_resolution_error_is_reported(self):
+        code, _, err = self.run_cmd("serp", "--keywords", "sinsaldo")
+        self.assertEqual(code, 2)
+        self.assertIn("40200", err)
+
     # ---- safety rails
     def test_max_keywords_cap_refuses(self):
         mock_apis.DFS_LAST.clear()

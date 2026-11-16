@@ -41,6 +41,11 @@ def dfs_serp(keyword):
     def org(rank, url, title):
         return {"type": "organic", "rank_group": rank, "rank_absolute": rank + 1, "url": url, "title": title,
                 "domain": url.split("/")[2]}
+    if keyword.startswith("opaco"):
+        def goto(n):
+            return f"https://google.com/goto?url=CAES{n}xyz&gsessionid=abc"
+        # resolve_goto_urls is simulated by dfs_serp_resolved below; here every result is an opaque token
+        return [{"keyword": keyword, "items": [org(n, goto(n), f"T{n}") for n in (1, 2, 3, 4)]}]
     if keyword == "vacio":
         return [{"keyword": keyword, "items": [{"type": "people_also_ask", "rank_group": 1}]}]
     items = [org(1, "https://www.a.com/guia/", "Guia A"),
@@ -86,7 +91,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, dfs_envelope(DFS_IDEAS))
         if task.get("keyword") == "sinsaldo":
             return self._send(200, dfs_envelope(None, cost=0, task_code=40200))
-        return self._send(200, dfs_envelope(dfs_serp(task["keyword"])))
+        res = dfs_serp(task["keyword"])
+        if task.get("resolve_goto_urls") and task["keyword"].startswith("opacoparcial"):
+            for it in res[0]["items"][:2]:  # DataForSEO resolves only some of them
+                it["url"] = f"https://real{it['rank_group']}.com/pagina"
+        elif task.get("resolve_goto_urls") and task["keyword"].startswith("opaco"):
+            for it in res[0]["items"]:
+                it["url"] = f"https://real{it['rank_group']}.com/pagina"
+        return self._send(200, dfs_envelope(res))
 
     def do_POST(self):
         req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")

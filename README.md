@@ -281,8 +281,10 @@ With the plugin installed, four commands (markdown files in `plugins/seo-pro/com
 
 `keyword_data.py` (dependency-free) uses the DataForSEO API: `kw-volume` (Google Ads volume, CPC
 and competition), `kw-ideas` (Labs keyword ideas), `serp` (organic top 10; the
-`google.com/goto?url=` wrappers SERP Live has returned since 31/10/2026 are unwrapped to the
-real URL) and `kw-cluster`, a deterministic clustering: keywords whose top 10 share at least
+`google.com/goto?url=` wrappers SERP Live has returned for about half the results since
+31/10/2026 are resolved by DataForSEO itself with `resolve_goto_urls`, which adds up to 40 s per
+request; any that stay opaque are flagged `unresolved` and left out of the clustering, which
+reports how many) and `kw-cluster`, a deterministic clustering: keywords whose top 10 share at least
 `--min-shared` URLs (default 3) form a cluster around the highest-volume keyword. Defaults are
 Spain and Spanish (`--location-code 2724 --language-code es`). Every request is billed by
 DataForSEO: the script prints the cost the API returns, `--max-keywords` (default 200) refuses
