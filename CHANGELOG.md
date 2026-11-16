@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.5.0 — Unreleased
+## 1.5.0 — 2026-11-16
 
 Slash commands, and keyword data from a real source instead of the model's memory.
 
