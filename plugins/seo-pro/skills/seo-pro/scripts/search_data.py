@@ -70,7 +70,7 @@ class ApiError(RuntimeError):
 
 
 def _request(url: str, method: str = "GET", body: dict | None = None, headers: dict | None = None,
-             retries: int = 3) -> dict:
+             retries: int = 3, timeout: float = 60) -> dict:
     data = json.dumps(body).encode() if body is not None else None
     hdrs = {"Accept": "application/json", "User-Agent": f"seo-pro-search-data/{__version__}"}
     if data is not None:
@@ -79,7 +79,7 @@ def _request(url: str, method: str = "GET", body: dict | None = None, headers: d
     for attempt in range(retries):
         req = urllib.request.Request(url, data=data, headers=hdrs, method=method)
         try:
-            with urllib.request.urlopen(req, timeout=60) as r:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
                 raw = r.read().decode("utf-8", "replace") or "{}"
             try:
                 return json.loads(raw)
