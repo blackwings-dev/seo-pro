@@ -73,6 +73,11 @@ references points to a source you can check.
 - **Your own data.** `search_data.py` pulls Search Console and Bing Webmaster data,
   field Core Web Vitals from CrUX and PageSpeed Insights, compares before/after or old/new
   URLs and splits brand from non-brand.
+- **Keyword data you can check.** `keyword_data.py` pulls search volume, ideas and the real
+  Google top 10 from DataForSEO and clusters keywords by shared URLs, with no LLM in the
+  numbers. It prints the cost the API reports, refuses lists above a cap and has a dry run.
+- **Slash commands.** `/seo-pro:seo-check`, `/seo-pro:schema`, `/seo-pro:clusters` and
+  `/seo-pro:brief` route to the skill and the scripts; they never invent numbers or data.
 - **Implements, doesn't just advise.** Next.js App Router code, plus Astro, WordPress,
   SPAs, Nginx, Apache, Cloudflare and Vercel/Netlify.
 - **Up to date with 2026.** FAQ rich results retired, spam policies applied to AI
@@ -88,6 +93,7 @@ references points to a source you can check.
 | **Python** | **≥ 3.9**, only for the scripts. No packages to install. |
 | **Playwright** | Optional, only for `seo_audit.py --render`: `pip install playwright && python -m playwright install chromium`. |
 | **Search Console / Bing / CrUX** | Optional. Your own OAuth token or API keys, only for `search_data.py`. |
+| **DataForSEO** | Optional, paid per request. `DATAFORSEO_LOGIN` and `DATAFORSEO_PASSWORD` (API credentials), only for `keyword_data.py`. |
 
 ---
 
@@ -139,6 +145,8 @@ a plugin you can also call it explicitly with `/seo-pro:seo-pro`.
 | *"5,000 city pages — programmatic SEO or spam?"* | Legitimacy test, data thresholds, launch in waves |
 | *"Plan our SEO for next quarter — we're a B2B SaaS"* | Operating plan: diagnosis, playbook, 90-day phases, dashboard |
 | *"Here are our Nginx logs — is Googlebot wasting its crawl?"* | `crawl_logs.py`: verified bots, crawl waste, sections, sitemap URLs never fetched |
+| *"Which of these 80 keywords can share one page?"* | `/seo-pro:clusters`: volumes, real SERPs and clusters by shared URLs (DataForSEO) |
+| *"Write a brief for 'seguro de hogar'"* | `/seo-pro:brief`: top 10, intent, outline with each item marked seen or assumption |
 | *"Our React site scores 94 in Lighthouse, so speed is fine?"* | Field data with `crux` + `--render` to show what only exists after JavaScript |
 
 Habits worth having:
@@ -185,6 +193,7 @@ plugins/seo-pro/skills/seo-pro/
 └── scripts/
     ├── seo_audit.py               the auditor (optional JavaScript rendering, HTML report)
     ├── crawl_logs.py              server-log analysis: search and AI bots, verified
+    ├── keyword_data.py            keyword volume, ideas, SERP and clusters (DataForSEO)
     └── search_data.py             Search Console, Bing Webmaster and Core Web Vitals data
 ```
 
@@ -257,6 +266,41 @@ share only the aggregated report.
 
 ---
 
+## Slash commands
+
+With the plugin installed, four commands (markdown files in `plugins/seo-pro/commands/`) call the skill and the scripts:
+
+| Command | What it does |
+|---|---|
+| `/seo-pro:seo-check <url>` | Runs `seo_audit.py` (with `--render` on JavaScript sites) and summarises the findings by priority, quoting the script; what it did not measure is listed as not verified |
+| `/seo-pro:schema <url or page type>` | JSON-LD from what the page really contains; missing data stays as `TODO` markers, never invented |
+| `/seo-pro:clusters <keywords or file>` | `keyword_data.py`: dry run, volumes, SERPs, clusters by shared top-10 URLs |
+| `/seo-pro:brief <keyword>` | Content brief from the real top 10, related ideas and Search Console data when you have it; anything not measured is marked as an assumption |
+
+## Keyword data (DataForSEO)
+
+`keyword_data.py` (dependency-free) uses the DataForSEO API: `kw-volume` (Google Ads volume, CPC
+and competition), `kw-ideas` (Labs keyword ideas), `serp` (organic top 10; the
+`google.com/goto?url=` wrappers SERP Live has returned since 31/10/2026 are unwrapped to the
+real URL) and `kw-cluster`, a deterministic clustering: keywords whose top 10 share at least
+`--min-shared` URLs (default 3) form a cluster around the highest-volume keyword. Defaults are
+Spain and Spanish (`--location-code 2724 --language-code es`). Every request is billed by
+DataForSEO: the script prints the cost the API returns, `--max-keywords` (default 200) refuses
+longer lists instead of truncating them, and `--dry-run` shows the requests without credentials
+or cost.
+
+```bash
+export DATAFORSEO_LOGIN=...      # API credentials from app.dataforseo.com/api-access
+export DATAFORSEO_PASSWORD=...
+python3 keyword_data.py kw-volume --keywords-file kws.txt --out volume.csv
+python3 keyword_data.py serp --keywords-file kws.txt --format json --out serps.json
+python3 keyword_data.py kw-cluster --serp-file serps.json --volumes volume.csv --min-shared 3 --out clusters.json
+python3 keyword_data.py kw-cluster --keywords-file kws.txt --dry-run
+```
+
+Limits worth stating: volumes are rounded monthly averages that group close variants; CPC and
+competition describe paid search; a SERP is one moment, one location and one device.
+
 ## Search Console and Bing data
 
 `search_data.py` (also dependency-free) pulls Search Console search analytics (paged, any
@@ -326,7 +370,7 @@ loads into context.
 
 - **Credentials stay in environment variables** — never in the repository, never in a
   report, never in the chat.
-- **Read-only by design.** `search_data.py` only reads; the Search Console scope it needs
+- **Read-only by design.** `search_data.py` and `keyword_data.py` only read; the Search Console scope it needs
   is `webmasters.readonly`.
 - **The auditor only makes GET requests**, identifies itself in its user agent and waits
   between pages (`--delay`, 0.5 s by default). Audit sites you own or are allowed to test.

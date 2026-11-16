@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 1.5.0 — Unreleased
+
+Slash commands, and keyword data from a real source instead of the model's memory.
+
+- New `scripts/keyword_data.py` 1.0.0 (dependency-free, DataForSEO API with `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD`): `kw-volume` (Google Ads volume, CPC, competition), `kw-ideas` (Labs keyword ideas), `serp` (organic top 10; `google.com/goto?url=` wrappers unwrapped) and `kw-cluster` (deterministic grouping by shared top-10 URLs, `--min-shared`, JSON or CSV, optional volumes). Prints the cost DataForSEO returns, `--max-keywords` cap (default 200, refuses instead of truncating) and `--dry-run`. Defaults Spain and Spanish. Endpoints and payloads follow the DataForSEO documentation; not exercised against the live API in this release (tests use local mocks).
+- New slash commands (`commands/`): `/seo-pro:seo-check`, `/seo-pro:schema`, `/seo-pro:clusters`, `/seo-pro:brief`. They route to the skill and the scripts and label anything not measured as an assumption.
+- Tests for every subcommand against a mock DataForSEO server, `goto` unwrapping and clustering edge cases (empty SERP, single keyword, ties, threshold, no chaining).
+- SKILL.md, README and manifests point to the new script and commands.
 
 - `seo_audit.py`: `nomodule` scripts in `<head>` (legacy polyfills such as Next.js's, never fetched by module-capable browsers) no longer count as render-blocking.
 - `seo_audit.py --redirect-map`: a header row in any language (`origen,destino`, `old_url,new_url`…) is skipped when it is not a URL, instead of being audited as a redirect.
